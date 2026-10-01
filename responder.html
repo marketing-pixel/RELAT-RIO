@@ -224,6 +224,22 @@ document.getElementById("saveAs").onclick=async()=>{
     stage.appendChild(clone);
     document.body.appendChild(stage);
 
+    // Força o layout completo a caber dentro da largura A4 virtual.
+    const fitStyle=document.createElement("style");
+    fitStyle.textContent=[
+      ".app{width:100%!important;max-width:none!important;margin:0!important}",
+      ".shell{width:100%!important;max-width:none!important}",
+      ".content{width:100%!important}",
+      ".hero,.content{box-sizing:border-box}",
+      ".rating{width:100%!important;overflow:visible!important}",
+      ".row{min-width:0!important;width:100%!important;grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr))!important}",
+      ".row>div,.choice{min-width:0!important}",
+      ".field input,.field textarea{min-width:0!important;max-width:100%!important}",
+      ".grid{width:100%!important;min-width:0!important}",
+      ".footer{width:100%!important;box-sizing:border-box}"
+    ].join("");
+    clone.prepend(fitStyle);
+
     /*
      * Remove elementos interativos que não fazem parte do documento final.
      */
@@ -287,7 +303,16 @@ document.getElementById("saveAs").onclick=async()=>{
     /*
      * Calcula a escala única para caber toda a página dentro da folha.
      */
-    const scale=Math.min(1,(INNER_H/naturalHeight));
+    const naturalWidth=Math.ceil(Math.max(
+      clone.scrollWidth,
+      clone.getBoundingClientRect().width
+    ));
+
+    const scale=Math.min(
+      1,
+      INNER_W/naturalWidth,
+      INNER_H/naturalHeight
+    );
 
     clone.style.transformOrigin="top left";
     clone.style.transform="scale("+scale+")";
