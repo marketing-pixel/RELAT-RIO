@@ -287,6 +287,41 @@ document.getElementById("saveAs").onclick=async()=>{
       });
     });
 
+    const rating=clone.querySelector("#ratings");
+    if(rating){
+      const selectedByName={};
+      ["atendimento","qualidade","entrega","expectativas"].forEach(name=>{
+        selectedByName[name]=source.querySelector('input[name="'+name+'"]:checked')?.value||"";
+      });
+
+      const rows=[
+        ["Atendimento vendas","atendimento"],
+        ["Qualidade produto","qualidade"],
+        ["Entrega no prazo","entrega"],
+        ["Atende as expectativas?","expectativas"]
+      ];
+      const options=["Muito satisfeito","Satisfeito","Insatisfeito"];
+
+      const staticRating=document.createElement("div");
+      staticRating.className="rating export-rating";
+      staticRating.innerHTML=
+        '<div class="row head"><div class="label">Quesito</div><div>Muito satisfeito</div><div>Satisfeito</div><div>Insatisfeito</div></div>'+
+        rows.map(([label,name])=>{
+          return '<div class="row"><div class="label">'+label+'</div>'+
+            options.map(option=>{
+              const selected=selectedByName[name]===option;
+              return '<div class="choice export-choice">'+
+                (selected
+                  ? '<span class="export-check" aria-hidden="true">✓</span>'
+                  : '<span class="export-empty" aria-hidden="true"></span>')+
+              '</div>';
+            }).join("")+
+          '</div>';
+        }).join("");
+
+      rating.replaceWith(staticRating);
+    }
+
     const liveFields=[...source.querySelectorAll('input:not([type="radio"]):not([type="checkbox"]),textarea')];
 
     liveFields.forEach(field=>{
