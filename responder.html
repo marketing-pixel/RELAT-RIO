@@ -199,6 +199,13 @@ document.getElementById("saveAs").onclick=async()=>{
 
     document.body.appendChild(clone);
 
+    // Usa a área real do conteúdo, não apenas a área visível da janela.
+    const realWidth=Math.max(clone.scrollWidth,clone.getBoundingClientRect().width,document.documentElement.clientWidth);
+    clone.style.width=realWidth+"px";
+
+    // Aguarda o navegador recalcular layout, fontes e campos antes da captura.
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+
     // Replica os valores dos campos exatamente como estão preenchidos.
     const liveFields=source.querySelectorAll("input,textarea");
     const clonedFields=clone.querySelectorAll("input,textarea");
@@ -234,16 +241,29 @@ document.getElementById("saveAs").onclick=async()=>{
     const actions=clone.querySelector(".client-actions");
     if(actions)actions.remove();
 
+    const captureWidth=Math.ceil(Math.max(
+      clone.scrollWidth,
+      clone.getBoundingClientRect().width
+    ));
+    const captureHeight=Math.ceil(Math.max(
+      clone.scrollHeight,
+      clone.getBoundingClientRect().height
+    ));
+
     const captured=await window.html2canvas(clone,{
-      scale:2,
+      scale:3,
+      width:captureWidth,
+      height:captureHeight,
       useCORS:true,
       allowTaint:false,
       backgroundColor:"#ffffff",
       logging:false,
       scrollX:0,
       scrollY:0,
-      windowWidth:Math.ceil(source.getBoundingClientRect().width),
-      windowHeight:Math.max(document.documentElement.scrollHeight,document.body.scrollHeight)
+      x:0,
+      y:0,
+      windowWidth:captureWidth,
+      windowHeight:captureHeight
     });
 
     clone.remove();
@@ -264,7 +284,7 @@ document.getElementById("saveAs").onclick=async()=>{
 
     const pageWidth=210;
     const pageHeight=297;
-    const margin=7;
+    const margin=5;
     const availableWidth=pageWidth-(margin*2);
     const availableHeight=pageHeight-(margin*2);
 
