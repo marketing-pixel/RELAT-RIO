@@ -96,13 +96,30 @@ const mClient=document.getElementById("m_client"),mOrder=document.getElementById
 const modelMessageEl=document.getElementById("modelMessage"),sTotalEl=document.getElementById("sTotal"),sPendingEl=document.getElementById("sPending"),sReceivedEl=document.getElementById("sReceived"),saidaBodyEl=document.getElementById("saidaBody"),recebidoBodyEl=document.getElementById("recebidoBody");
 function msg(el,text,error=true){el.textContent=text;el.className="notice show "+(error?"error":"success")}
 async function session(){
+  try{
+    const saved=sessionStorage.getItem("cortez_auth_session");
+    if(saved){
+      const parsed=JSON.parse(saved);
+      if(parsed?.access_token&&parsed?.refresh_token){
+        const {error}=await supabase.auth.setSession({
+          access_token:parsed.access_token,
+          refresh_token:parsed.refresh_token
+        });
+        if(error) throw error;
+        sessionStorage.removeItem("cortez_auth_session");
+      }
+    }
+  }catch{
+    sessionStorage.removeItem("cortez_auth_session");
+  }
+
   const {data}=await supabase.auth.getSession();
   if(data.session){
     login.hidden=true;
     control.hidden=false;
     control.classList.add("is-open");
     document.body.classList.add("control-open");
-    loadAll();
+    await loadAll();
   }else{
     login.hidden=false;
     control.hidden=true;
@@ -122,7 +139,7 @@ document.getElementById("loginForm").onsubmit=async e=>{
   }
   msg(document.getElementById("loginMessage"),"E-mail ou senha inválidos.");
 };
-document.getElementById("logout").onclick=async()=>{sessionStorage.removeItem("cortez_internal_login");await supabase.auth.signOut();location.reload()};
+document.getElementById("logout").onclick=async()=>{sessionStorage.removeItem("cortez_internal_login");sessionStorage.removeItem("cortez_auth_session");await supabase.auth.signOut();location.reload()};
 document.querySelectorAll(".workflow-nav .flow-node").forEach(b=>b.onclick=()=>{document.querySelectorAll(".workflow-nav .flow-node").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active");});
 async function loadModel(){
   const {data,error}=await supabase.from("report_templates").select("*").order("created_at").limit(1).maybeSingle();
