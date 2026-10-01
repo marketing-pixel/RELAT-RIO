@@ -77,6 +77,7 @@
 
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { jsPDF } from "https://esm.sh/jspdf@2.5.2";
 import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
 
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
@@ -161,14 +162,100 @@ function initializeReport(){
 
 document.getElementById("printReport").onclick=()=>window.print();
 
-document.getElementById("saveAs").onclick=()=>{
-  /*
-   * O navegador controla a caixa de salvamento/impressão do sistema.
-   * Assim o cliente pode escolher "Salvar como PDF", "Microsoft Print to PDF"
-   * ou outra impressora disponível e definir pasta/nome no diálogo padrão.
-   */
-  window.print();
-}
+document.getElementById("saveAs").onclick=async()=>{
+  const btn=document.getElementById("saveAs");
+  btn.disabled=true;
+  const original=btn.textContent;
+  btn.textContent="Gerando PDF…";
+
+  try{
+    const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+    const margin=16;
+    const pageW=210;
+    const contentW=pageW-(margin*2);
+    let y=18;
+
+    const addTitle=(text,size=14)=>{
+      pdf.setFont("helvetica","bold");
+      pdf.setFontSize(size);
+      pdf.setTextColor(21,60,87);
+      const lines=pdf.splitTextToSize(text,contentW);
+      pdf.text(lines,margin,y);
+      y+=lines.length*(size*0.42)+3;
+    };
+
+    const addText=(text,size=10,bold=false)=>{
+      pdf.setFont("helvetica",bold?"bold":"normal");
+      pdf.setFontSize(size);
+      pdf.setTextColor(45,57,66);
+      const lines=pdf.splitTextToSize(String(text||""),contentW);
+      if(y+(lines.length*4.6)>278){pdf.addPage();y=18}
+      pdf.text(lines,margin,y);
+      y+=lines.length*4.6+2;
+    };
+
+    addTitle("Pesquisa de satisfação",20);
+    addText("Cortez Móveis · Relatório de satisfação do cliente",9,false);
+
+    const clientName=document.getElementById("client_name").value.trim();
+    const pedido=document.getElementById("pedido").value.trim();
+    const nf=document.getElementById("nf").value.trim();
+
+    addTitle("Dados do relatório",13);
+    addText("Cliente / Empresa: "+clientName,10,true);
+    addText("Referente ao pedido nº: "+pedido,10,true);
+    addText("NF nº: "+nf,10,true);
+
+    addTitle("Avaliação",13);
+    const ratingLabels={
+      atendimento:"Atendimento vendas",
+      qualidade:"Qualidade produto",
+      entrega:"Entrega no prazo",
+      expectativas:"Atende as expectativas?"
+    };
+    for(const [key,label] of Object.entries(ratingLabels)){
+      const value=document.querySelector('input[name="'+key+'"]:checked')?.value||"Não informado";
+      addText(label+": "+value,10,false);
+    }
+
+    addTitle("Comentário",13);
+    addText(document.getElementById("comentario").value.trim()||"Sem comentário.");
+
+    addTitle("Responsável e assinatura",13);
+    addText("Responsável: "+document.getElementById("responsavel").value.trim(),10,true);
+    addText("Cargo: "+document.getElementById("cargo").value.trim(),10);
+    addText("Data do preenchimento: "+document.getElementById("data_preenchimento").value,10);
+
+    const signatureCanvas=document.getElementById("signature");
+    if(signed){
+      if(y+45>278){pdf.addPage();y=18}
+      addText("Assinatura:",10,true);
+      const dataUrl=signatureCanvas.toDataURL("image/png");
+      pdf.addImage(dataUrl,"PNG",margin,y,contentW,42);
+      y+=47;
+    }
+
+    pdf.setDrawColor(220,228,233);
+    pdf.line(margin,285,pageW-margin,285);
+    pdf.setFont("helvetica","normal");
+    pdf.setFontSize(8);
+    pdf.setTextColor(120,132,140);
+    pdf.text("Cortez Móveis · Pesquisa de satisfação",margin,291);
+
+    const safe=value=>String(value||"").replace(/[\\/:*?"<>|]+/g,"_").replace(/\s+/g," ").trim();
+    const filename="Relatorio - "+safe(clientName||"Cliente")+" - Pedido "+safe(pedido||"Sem pedido")+".pdf";
+
+    pdf.save(filename);
+
+    showMsg("PDF gerado com sucesso. O navegador fará o salvamento do arquivo.",false);
+  }catch(error){
+    console.error(error);
+    showMsg("Não foi possível gerar o PDF. Tente novamente.",true);
+  }finally{
+    btn.disabled=false;
+    btn.textContent=original;
+  }
+};
 
 document.getElementById("submit").onclick=async()=>{
   if(!token){
