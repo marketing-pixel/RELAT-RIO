@@ -149,23 +149,12 @@ loginForm?.addEventListener("submit",async e=>{
   const email=loginEmail.value.trim().toLowerCase();
   const password=loginPassword.value;
   const {error}=await supabase.auth.signInWithPassword({email,password});
-  if(!error){sessionStorage.setItem("cortez_internal_login","1");location.replace("controle.html");return}
-  if(email!=="marketing@cortezmoveis.com.br"){
-    showLoginMsg("Confira o e-mail e a senha informados.");
-    return;
-  }
-  const redirectUrl=new URL("index.html",window.location.href).href;
-  const {data:signup,error:signupError}=await supabase.auth.signUp({email,password,options:{emailRedirectTo:redirectUrl}});
-  if(signupError){
-    showLoginMsg("Confira o e-mail e a senha informados.");
-    return;
-  }
-  if(signup?.session){
+  if(!error){
     sessionStorage.setItem("cortez_internal_login","1");
     location.replace("controle.html");
     return;
   }
-  showLoginMsg("Acesso criado. Confirme o e-mail recebido para ativar o acesso interno.",false);
+  showLoginMsg("E-mail ou senha inválidos.");
 });
 
 async function init(){
