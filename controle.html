@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pt-BR">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Controle de Relatórios | Cortez Móveis</title><link rel="stylesheet" href="styles.css"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="https://cdn.jsdelivr.net/npm/jspdf@3.0.3/dist/jspdf.umd.min.js"></script></head>
+<title>Controle de Relatórios | Cortez Móveis</title><link rel="stylesheet" href="styles.css"><script src="https://cdn.jsdelivr.net/npm/jspdf@3.0.3/dist/jspdf.umd.min.js"></script></head>
 <body>
 <main class="app" id="app">
 <header class="topbar">
@@ -89,7 +89,36 @@
 <script>
 const SUPABASE_URL="https://kvxmnbkfscpqnbftqjeu.supabase.co";
 const SUPABASE_KEY="sb_publishable_Mx-i_T4xREFQuinN-aq3lA_f3jMTFc5";
-const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const SUPABASE_SDK_VERSION="2.118.0";
+let supabase=null;
+
+function loadScript(src){
+  return new Promise((resolve,reject)=>{
+    const existing=document.querySelector('script[data-supabase-sdk="1"]');
+    if(existing&&window.supabase?.createClient){resolve();return;}
+    const script=document.createElement("script");
+    script.src=src;
+    script.async=false;
+    script.dataset.supabaseSdk="1";
+    script.onload=()=>resolve();
+    script.onerror=()=>reject(new Error("Não foi possível carregar o módulo de autenticação."));
+    document.head.appendChild(script);
+  });
+}
+
+async function ensureSupabase(){
+  if(supabase)return supabase;
+  if(!window.supabase?.createClient){
+    try{
+      await loadScript("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@"+SUPABASE_SDK_VERSION+"/dist/umd/supabase.js");
+    }catch{
+      await loadScript("https://unpkg.com/@supabase/supabase-js@"+SUPABASE_SDK_VERSION+"/dist/umd/supabase.js");
+    }
+  }
+  if(!window.supabase?.createClient)throw new Error("O módulo de autenticação não carregou.");
+  supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  return supabase;
+}
 let reports=[];
 const login=document.getElementById("login"),control=document.getElementById("control");
 const mClient=document.getElementById("m_client"),mOrder=document.getElementById("m_order"),mNf=document.getElementById("m_nf"),mCode=document.getElementById("m_code"),mRevision=document.getElementById("m_revision");
@@ -97,6 +126,7 @@ const modelMessageEl=document.getElementById("modelMessage"),sTotalEl=document.g
 function msg(el,text,error=true){el.textContent=text;el.className="notice show "+(error?"error":"success")}
 async function session(){
   try{
+    await ensureSupabase();
     const saved=sessionStorage.getItem("cortez_auth_session");
     if(saved){
       const parsed=JSON.parse(saved);
@@ -136,15 +166,30 @@ document.getElementById("loginForm").onsubmit=async e=>{
   const loginMessage=document.getElementById("loginMessage");
   loginMessage.className="notice";
   try{
-    const {data,error}=await supabase.auth.signInWithPassword({email,password});
-    if(error){
-      msg(loginMessage,error.message||"Não foi possível entrar.");
+    const response=await fetch(
+      SUPABASE_URL+"/auth/v1/token?grant_type=password",
+      {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "apikey":SUPABASE_KEY
+        },
+        body:JSON.stringify({email,password})
+      }
+    );
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok){
+      msg(loginMessage,data.error_description||data.msg||data.message||"E-mail ou senha inválidos.");
       return;
     }
-    if(!data?.session){
-      msg(loginMessage,"A autenticação foi concluída, mas nenhuma sessão foi criada.");
+    if(!data.access_token||!data.refresh_token){
+      msg(loginMessage,"O servidor não retornou uma sessão válida.");
       return;
     }
+    sessionStorage.setItem("cortez_auth_session",JSON.stringify({
+      access_token:data.access_token,
+      refresh_token:data.refresh_token
+    }));
     sessionStorage.setItem("cortez_internal_login","1");
     msg(loginMessage,"Acesso autorizado. Abrindo o controle…",false);
     await session();
@@ -154,7 +199,7 @@ document.getElementById("loginForm").onsubmit=async e=>{
     if(button){button.disabled=false;button.textContent="Entrar no controle";}
   }
 };
-document.getElementById("logout").onclick=async()=>{sessionStorage.removeItem("cortez_internal_login");sessionStorage.removeItem("cortez_auth_session");await supabase.auth.signOut();location.reload()};
+document.getElementById("logout").onclick=async()=>{sessionStorage.removeItem("cortez_internal_login");sessionStorage.removeItem("cortez_auth_session");if(supabase)await supabase.auth.signOut();location.reload()};
 document.querySelectorAll(".workflow-nav .flow-node").forEach(b=>b.onclick=()=>{document.querySelectorAll(".workflow-nav .flow-node").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active");});
 async function loadModel(){
   const {data,error}=await supabase.from("report_templates").select("*").order("created_at").limit(1).maybeSingle();
