@@ -75,3 +75,14 @@ body{background:#fff}.app{width:100%;margin:0}.shell{border:0;box-shadow:none}.t
 .flow-dot{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;background:#f4f7f8;border:1px solid #dce5ea;color:#63747e;font-weight:900;box-shadow:0 8px 20px rgba(18,43,58,.06);transition:.25s}
 .flow-label{font-size:12px;font-weight:850}.flow-sub{font-size:10px;color:#8a979e}.flow-node.active .flow-dot{background:#edf6fa;color:var(--navy);border-color:#b9d4e2}.flow-node.featured .flow-dot{width:68px;height:68px;background:linear-gradient(145deg,var(--navy2),var(--navy));color:#fff;border:0;box-shadow:0 16px 32px rgba(21,60,87,.22)}.flow-node.featured .flow-label{font-size:14px;color:var(--navy)}.flow-line{height:1px;background:linear-gradient(90deg,#d4e0e6,#9fc1d2,#d4e0e6)}
 .workspace-overlay{position:fixed;inset:0;z-index:30;margin:0!important;width:100%!important;min-height:100vh;border-radius:0;border:0;overflow:auto;background:rgba(247,250,251,.98);opacity:0;transform:translateY(20px) scale(.985);pointer-events:none;transition:opacity .28s ease,transform .32s ease}.workspace-overlay.is-open{opacity:1;transform:none;pointer-events:auto}
+
+.copy-status{margin-top:9px;font-size:10px;color:var(--green);font-weight:800}
+.success-modal{transform:translateY(12px) scale(.96);opacity:0;transition:transform .32s cubic-bezier(.2,.8,.2,1),opacity .25s ease}
+.modal.show .success-modal{transform:none;opacity:1}
+.link-modal-icon{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;margin-bottom:14px;background:#edf4f7;color:var(--navy);border:1px solid #d8e5eb;font-size:22px;font-weight:900}
+.link-modal-icon.success{background:var(--green);color:#fff;border-color:var(--green);box-shadow:0 12px 30px rgba(47,127,95,.24);animation:successPulse .55s ease}
+.modal-kicker{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:850;margin-bottom:5px}
+@keyframes successPulse{0%{transform:scale(.72);opacity:.2}65%{transform:scale(1.08)}100%{transform:scale(1);opacity:1}}
+#finalize.is-processing{opacity:.7;pointer-events:none}
+#finalize.is-processing:before{content:"";display:inline-block;width:11px;height:11px;margin-right:8px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;vertical-align:-2px;animation:spin .65s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}

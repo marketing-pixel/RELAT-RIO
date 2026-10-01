@@ -74,7 +74,17 @@
 </section>
 </main>
 
-<div id="modal" class="modal"><div class="modal-card"><h2>Link do cliente gerado</h2><p>O relatório já foi criado e entrou em <strong>Saídas</strong>.</p><div id="generatedUrl" class="url"></div><div class="modal-actions"><button class="btn light" id="closeModal">Fechar</button><button class="btn primary" id="copyLink">Copiar link</button></div></div></div>
+<div id="modal" class="modal">
+  <div class="modal-card success-modal">
+    <div id="linkModalIcon" class="link-modal-icon">✓</div>
+    <div class="modal-kicker">Saída criada</div>
+    <h2>Link pronto para o cliente</h2>
+    <p>O relatório já entrou em <strong>Saídas</strong> e o link foi copiado para a área de transferência.</p>
+    <div id="generatedUrl" class="url"></div>
+    <div id="copyStatus" class="copy-status">Link copiado automaticamente.</div>
+    <div class="modal-actions"><button class="btn light" id="closeModal">Fechar</button><button class="btn primary" id="copyLink">Copiar novamente</button></div>
+  </div>
+</div>
 
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -129,11 +139,17 @@ async function loadModel(){
 async function loadReports(){const {data,error}=await supabase.from("reports").select("id,public_token,status,client_name,pedido,nf,responsavel,sent_at,received_at").order("created_at",{ascending:false});if(error){msg(document.getElementById("modelMessage"),error.message);return}reports=data||[];const out=reports.filter(r=>r.status==="saida"&&r.client_name&&r.pedido&&r.nf),inc=reports.filter(r=>r.status==="recebido");sTotalEl.textContent=out.length+inc.length;sPendingEl.textContent=out.length;sReceivedEl.textContent=inc.length;saidaBodyEl.innerHTML=out.length?out.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+date(r.sent_at)+'</td><td><span class="pill out">Enviado · aguardando cliente</span></td><td><button class="copy-btn" data-token="'+r.public_token+'">Copiar</button></td></tr>').join(""):'<tr><td colspan="6">Nenhuma saída cadastrada.</td></tr>';recebidoBodyEl.innerHTML=inc.length?inc.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+esc(r.responsavel||"-")+'</td><td>'+date(r.received_at)+'</td><td><span class="pill in">Recebido</span></td></tr>').join(""):'<tr><td colspan="6">Nenhum relatório recebido.</td></tr>';document.querySelectorAll("[data-token]").forEach(b=>b.onclick=()=>copy(makeUrl(b.dataset.token)))}
 function date(v){return v?new Date(v).toLocaleString("pt-BR"): "-"}function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
 function makeUrl(token){
-  const u=new URL("./index.html",window.location.href);
+  const u=new URL("./formulario.html",window.location.href);
   u.search=new URLSearchParams({token}).toString();
   return u.href;
 }
-async function copy(t){try{await navigator.clipboard.writeText(t);alert("Link copiado.")}catch{prompt("Copie o link:",t)}}
+async function copy(t){
+  try{await navigator.clipboard.writeText(t);return true}
+  catch{
+    try{const ta=document.createElement("textarea");ta.value=t;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();const ok=document.execCommand("copy");ta.remove();return ok}
+    catch{return false}
+  }
+}
 document.getElementById("saveModel").onclick=async()=>{const {data,error}=await supabase.from("report_templates").update({internal_client:mClient.value.trim(),internal_order:mOrder.value.trim(),internal_invoice:mNf.value.trim(),code:mCode.value.trim(),revision:mRevision.value.trim(),updated_at:new Date().toISOString()}).not("id","is",null).select().maybeSingle();if(error)msg(modelMessageEl,error.message);else msg(modelMessageEl,"Modelo salvo com sucesso.",false)};
 document.getElementById("finalize").onclick=async()=>{
   const client=mClient.value.trim();
@@ -184,12 +200,16 @@ document.getElementById("finalize").onclick=async()=>{
     return;
   }
 
-  const clientUrl=new URL("./index.html",window.location.href);
+  const clientUrl=new URL("./formulario.html",window.location.href);
   clientUrl.search=new URLSearchParams({token:r.public_token}).toString();
+  const copied=await copy(clientUrl.href);
   document.getElementById("generatedUrl").textContent=clientUrl.href;
+  document.getElementById("copyStatus").textContent=copied?"Link copiado automaticamente.":"Link gerado. Use o botão abaixo para copiar.";
+  document.getElementById("linkModalIcon").classList.add("success");
   document.getElementById("modal").classList.add("show");
   await loadReports();
-  msg(modelMessageEl,"Relatório enviado para Saídas com sucesso.",false);
+  msg(modelMessageEl,"Saída criada e link copiado com sucesso.",false);
+
 };
 document.getElementById("closeModal").onclick=()=>document.getElementById("modal").classList.remove("show");document.getElementById("copyLink").onclick=()=>copy(document.getElementById("generatedUrl").textContent);
 async function loadAll(){await loadModel();await loadReports()}
