@@ -11,13 +11,13 @@
   <header class="topbar">
     <div class="brand">
       <img src="https://raw.githubusercontent.com/marketing-pixel/SITE/main/assets/Logo.png" alt="Cortez Móveis">
-      <div class="brand-copy"><strong>GESTÃO DA QUALIDADE</strong><span>FVEN003 · Revisão 02</span></div>
+      <div class="brand-copy"><strong>PESQUISA DE SATISFAÇÃO</strong><span>Cortez Móveis</span></div>
     </div>
     <div class="internal-badge">Pesquisa de satisfação</div>
   </header>
   <section class="shell" id="reportShell">
     <header class="hero">
-      <div class="eyebrow">FVEN003 · RELATÓRIO DE SATISFAÇÃO DO CLIENTE</div>
+      <div class="eyebrow">CORTEZ MÓVEIS · RELATÓRIO DE SATISFAÇÃO</div>
       <h1>Pesquisa de satisfação</h1>
       <p>A Cortez Móveis agradece o privilégio de tê-lo como cliente. Sua avaliação nos ajuda a aperfeiçoar nossos procedimentos e a qualidade dos nossos produtos.</p>
     </header>
@@ -75,25 +75,32 @@
           <button class="btn primary" id="submit" type="button">Enviar</button>
         </div>      </div>
     </div>
-    <footer class="footer"><span>FVEN003 RELATÓRIO DE SATISFAÇÃO DO CLIENTE_REV02</span><span>Cortez Móveis</span></footer>
+    <footer class="footer"><span>Pesquisa de satisfação · Cortez Móveis</span><span>Preenchimento do cliente</span></footer>
   </section>
 
 </main>
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
+
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
 const params=new URLSearchParams(location.search);
-const token=(params.get("token")||params.get("p_token")||"").trim();
-console.info("Página pública carregada. Token recebido:", token ? "sim" : "não");
+const token=(params.get("token")||"").trim();
+const model={
+  cliente:params.get("cliente")||"",
+  pedido:params.get("pedido")||"",
+  nf:params.get("nf")||""
+};
+
 let signed=false,drawing=false;
 const canvas=document.getElementById("signature"),ctx=canvas.getContext("2d");
+
 function resizeCanvas(keep=true){
   const old=keep&&signed?canvas.toDataURL("image/png"):null;
   const r=canvas.getBoundingClientRect(),d=devicePixelRatio||1;
   canvas.width=r.width*d;canvas.height=r.height*d;
-  ctx.setTransform(d,0,0,d,0,0);ctx.lineCap="round";ctx.lineJoin="round";
-  ctx.lineWidth=2.2;ctx.strokeStyle="#153c57";
+  ctx.setTransform(d,0,0,d,0,0);
+  ctx.lineCap="round";ctx.lineJoin="round";ctx.lineWidth=2.2;ctx.strokeStyle="#153c57";
   if(old){const img=new Image;img.onload=()=>ctx.drawImage(img,0,0,r.width,r.height);img.src=old}
 }
 function pos(e){const r=canvas.getBoundingClientRect();return{x:e.clientX-r.left,y:e.clientY-r.top}}
@@ -101,47 +108,39 @@ canvas.addEventListener("pointerdown",e=>{drawing=true;canvas.setPointerCapture(
 canvas.addEventListener("pointermove",e=>{if(!drawing)return;const p=pos(e);ctx.lineTo(p.x,p.y);ctx.stroke();signed=true});
 ["pointerup","pointercancel","pointerleave"].forEach(v=>canvas.addEventListener(v,()=>drawing=false));
 document.getElementById("clearSig").onclick=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);signed=false};
-function showMsg(text,error=true){const m=document.getElementById("message");m.textContent=text;m.className="notice show "+(error?"error":"success")}
+
+function showMsg(text,error=true){
+  const m=document.getElementById("message");
+  m.textContent=text;m.className="notice show "+(error?"error":"success");
+}
+function setVal(id,v){const el=document.getElementById(id);if(el)el.value=v||""}
 function lockAll(){
   document.querySelectorAll("#formArea input,#formArea textarea").forEach(el=>{
-    if(!["client_name","pedido","nf"].includes(el.id))el.disabled=true
+    if(!["client_name","pedido","nf"].includes(el.id))el.disabled=true;
   });
-  document.querySelector("#clearSig").disabled=true;
+  document.getElementById("clearSig").disabled=true;
   document.getElementById("submit").hidden=true;
 }
-function setVal(id,v){const el=document.getElementById(id);if(el&&v!=null)el.value=v}
-async function loadReport(){
-  if(!token){document.getElementById("loading").className="notice";document.getElementById("invalid").className="notice show error";return}
-  const {data,error}=await supabase.rpc("get_report_public",{p_token:token});
+function loadGeneratedModel(){
+  if(!token||!model.cliente||!model.pedido||!model.nf){
+    document.getElementById("loading").className="notice";
+    document.getElementById("invalid").className="notice show error";
+    return false;
+  }
+  setVal("client_name",model.cliente);
+  setVal("pedido",model.pedido);
+  setVal("nf",model.nf);
+  setVal("data_preenchimento",new Date().toISOString().slice(0,10));
   document.getElementById("loading").className="notice";
-  if(error){
-    console.error("Falha ao validar link público:",error);
-    document.getElementById("invalid").textContent="Não foi possível validar este link agora. Gere um novo link pelo Controle de Relatórios.";
-    document.getElementById("invalid").className="notice show error";
-    return;
-  }
-  if(!data){
-    document.getElementById("invalid").textContent="Este link não é válido ou já não está disponível. Solicite à Cortez Móveis um novo link de preenchimento.";
-    document.getElementById("invalid").className="notice show error";
-    return;
-  }
   document.getElementById("formArea").hidden=false;
-  ["client_name","pedido","nf"].forEach(id=>setVal(id,data[id]));
-  setVal("data_preenchimento",data.data_preenchimento||new Date().toISOString().slice(0,10));
-  if(data.status==="recebido"){
-    ["comentario","responsavel","cargo"].forEach(id=>setVal(id,data[id]));
-    for(const n of ["atendimento","qualidade","entrega","expectativas"]){
-      const el=document.querySelector('input[name="'+n+'"][value="'+data[n]+'"]');if(el)el.checked=true
-    }
-    if(data.assinatura_data_url){
-      const img=new Image;img.onload=()=>{const r=canvas.getBoundingClientRect();ctx.drawImage(img,0,0,r.width,r.height);signed=true};img.src=data.assinatura_data_url
-    }
-    document.getElementById("receivedBanner").hidden=false;lockAll();
-  }
+  return true;
 }
+
 document.getElementById("printReport").onclick=()=>window.print();
 document.getElementById("saveAs").onclick=()=>window.print();
+
 document.getElementById("submit").onclick=async()=>{
+  if(!token){showMsg("Este link não possui uma identificação válida.");return}
   const ratings=["atendimento","qualidade","entrega","expectativas"],payload={};
   for(const n of ratings)payload[n]=document.querySelector('input[name="'+n+'"]:checked')?.value||"";
   payload.comentario=document.getElementById("comentario").value;
@@ -149,19 +148,43 @@ document.getElementById("submit").onclick=async()=>{
   payload.cargo=document.getElementById("cargo").value;
   payload.data_preenchimento=document.getElementById("data_preenchimento").value;
   payload.assinatura_data_url=signed?canvas.toDataURL("image/png"):"";
+
   if(ratings.some(n=>!payload[n])||!payload.responsavel||!payload.cargo||!payload.data_preenchimento||!signed){
-    showMsg("Preencha todos os quesitos, responsável, cargo, data e assinatura antes de enviar.");return
+    showMsg("Preencha todos os quesitos, responsável, cargo, data e assinatura antes de enviar.");
+    return;
   }
-  const btn=document.getElementById("submit");btn.disabled=true;btn.textContent="Enviando…";
-  const {data,error}=await supabase.rpc("submit_report_public",{p_token:token,p_atendimento:payload.atendimento,p_qualidade:payload.qualidade,p_entrega:payload.entrega,p_expectativas:payload.expectativas,p_comentario:payload.comentario,p_responsavel:payload.responsavel,p_cargo:payload.cargo,p_data_preenchimento:payload.data_preenchimento,p_assinatura_data_url:payload.assinatura_data_url});
-  if(error){btn.disabled=false;btn.textContent="Enviar";showMsg(error.message||"Não foi possível enviar o relatório.");return}
-  btn.disabled=false;btn.textContent="Enviado ✓";
+
+  const btn=document.getElementById("submit");
+  btn.disabled=true;btn.textContent="Enviando…";
+
+  const {error}=await supabase.rpc("submit_report_public",{
+    p_token:token,
+    p_atendimento:payload.atendimento,
+    p_qualidade:payload.qualidade,
+    p_entrega:payload.entrega,
+    p_expectativas:payload.expectativas,
+    p_comentario:payload.comentario,
+    p_responsavel:payload.responsavel,
+    p_cargo:payload.cargo,
+    p_data_preenchimento:payload.data_preenchimento,
+    p_assinatura_data_url:payload.assinatura_data_url
+  });
+
+  if(error){
+    btn.disabled=false;btn.textContent="Enviar";
+    showMsg(error.message||"Não foi possível enviar o relatório.");
+    return;
+  }
+
+  btn.textContent="Enviado ✓";
   showMsg("Relatório enviado com sucesso. Obrigado pela sua avaliação.",false);
-  document.getElementById("receivedBanner").hidden=false;lockAll();
+  document.getElementById("receivedBanner").hidden=false;
+  lockAll();
 };
+
 window.addEventListener("resize",()=>resizeCanvas(true));
 resizeCanvas(false);
-loadReport();
+loadGeneratedModel();
 </script>
 </body>
 </html>
