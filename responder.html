@@ -169,56 +169,191 @@ document.getElementById("saveAs").onclick=async()=>{
   const original=btn.textContent;
   btn.textContent="Gerando PDF…";
 
+  let stage=null;
+
   try{
     if(!window.jspdf?.jsPDF)throw new Error("Gerador de PDF não carregou.");
     if(!window.html2canvas)throw new Error("Captura do formulário não carregou.");
 
-    /*
-     * Captura diretamente o conteúdo real da página.
-     * Não é feita nenhuma reconstrução do layout e nada é recortado antes
-     * da captura. Depois, a imagem inteira é reduzida proporcionalmente
-     * para uma única folha A4.
-     */
     const source=document.querySelector(".app");
     if(!source)throw new Error("Formulário não encontrado.");
 
-    const actions=document.querySelector(".client-actions");
-    const previousDisplay=actions?.style.display||"";
-    if(actions)actions.style.display="none";
+    /*
+     * Folha A4 virtual em 96 DPI.
+     * O conteúdo é renderizado em largura fixa e somente depois reduzido
+     * proporcionalmente até caber inteiro na folha.
+     */
+    const PAGE_W=794;
+    const PAGE_H=1123;
+    const PAD=18;
+    const CONTENT_W=PAGE_W-(PAD*2);
+    const CONTENT_H=PAGE_H-(PAD*2);
 
-    // Aguarda fontes e imagens terminarem de carregar.
-    if(document.fonts?.ready)await document.fonts.ready;
-    await Promise.all([...document.images].map(img=>{
-      if(img.complete)return Promise.resolve();
-      return new Promise(resolve=>{
-        img.addEventListener("load",resolve,{once:true});
-        img.addEventListener("error",resolve,{once:true});
-      });
-    }));
+    stage=document.createElement("div");
+    stage.style.cssText=[
+      "position:absolute",
+      "left:-100000px",
+      "top:0",
+      "width:"+PAGE_W+"px",
+      "height:"+PAGE_H+"px",
+      "padding:"+PAD+"px",
+      "box-sizing:border-box",
+      "overflow:hidden",
+      "background:#fff",
+      "margin:0"
+    ].join(";");
 
-    const rect=source.getBoundingClientRect();
-    const fullWidth=Math.ceil(Math.max(source.scrollWidth,rect.width));
-    const fullHeight=Math.ceil(Math.max(source.scrollHeight,rect.height));
+    const clone=source.cloneNode(true);
+    clone.style.cssText=[
+      "position:relative",
+      "display:block",
+      "width:"+CONTENT_W+"px",
+      "max-width:"+CONTENT_W+"px",
+      "min-width:0",
+      "height:auto",
+      "max-height:none",
+      "margin:0",
+      "padding:0",
+      "overflow:visible",
+      "background:#fff",
+      "box-shadow:none",
+      "border:0",
+      "opacity:1",
+      "transform:none",
+      "pointer-events:none"
+    ].join(";");
 
-    if(!fullWidth||!fullHeight)throw new Error("Dimensões do formulário inválidas.");
+    stage.appendChild(clone);
+    document.body.appendChild(stage);
 
-    const captured=await window.html2canvas(source,{
+    const pdfCss=document.createElement("style");
+    pdfCss.textContent=[
+      "*{box-sizing:border-box!important}",
+      ".app{width:100%!important;max-width:none!important;margin:0!important;padding:0!important}",
+      ".topbar{margin-bottom:10px!important}",
+      ".brand img{width:105px!important;height:42px!important}",
+      ".brand-copy strong{font-size:11px!important}",
+      ".brand-copy span{font-size:9px!important}",
+      ".internal-badge{font-size:8px!important;padding:6px 8px!important}",
+      ".shell{width:100%!important;max-width:none!important;border-radius:14px!important;box-shadow:none!important}",
+      ".hero{padding:20px 22px!important}",
+      ".hero h1{font-size:26px!important;margin:5px 0 5px!important}",
+      ".hero p{font-size:10px!important;line-height:1.35!important}",
+      ".hero .eyebrow{font-size:8px!important}",
+      ".content{padding:18px 20px!important}",
+      ".section{padding-bottom:15px!important}",
+      ".section+.section{padding-top:15px!important}",
+      ".section-title{gap:9px!important;margin-bottom:10px!important}",
+      ".number{width:26px!important;height:26px!important;border-radius:7px!important;font-size:9px!important;flex:0 0 auto!important}",
+      ".section-title h2{font-size:13px!important}",
+      ".section-title p{font-size:9px!important;margin-top:2px!important}",
+      ".grid{gap:8px!important}",
+      ".field{gap:4px!important;font-size:9px!important}",
+      ".field input,.field textarea{padding:8px 9px!important;font-size:9px!important;border-radius:8px!important}",
+      ".field textarea{min-height:70px!important;height:70px!important}",
+      ".rating{width:100%!important;max-width:100%!important;overflow:visible!important}",
+      ".row{width:100%!important;min-width:0!important;grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr))!important}",
+      ".row>div,.choice{min-width:0!important;min-height:38px!important;padding:6px!important;font-size:7px!important}",
+      ".label{font-size:8px!important;white-space:normal!important;overflow:visible!important;word-break:normal!important}",
+      ".dot{width:13px!important;height:13px!important;border-width:1.5px!important}",
+      ".choice input:checked+.dot{border-width:3px!important}",
+      ".signature{border-radius:8px!important}",
+      ".sig-top{padding:8px 9px!important}",
+      ".sig-top strong{font-size:9px!important}",
+      ".sig-top span{font-size:7px!important}",
+      ".sig-top button{display:none!important}",
+      "#signature{height:105px!important}",
+      ".sig-line{margin:0 15px 10px!important}",
+      ".sig-caption{font-size:7px!important;padding:0 6px 7px!important}",
+      ".client-actions{display:none!important}",
+      ".footer{padding:8px 20px!important;font-size:7px!important}",
+      ".notice{font-size:8px!important}",
+      "input,.field textarea{overflow:visible!important}"
+    ].join("");
+    clone.prepend(pdfCss);
+
+    // Transforma inputs e textareas em caixas de texto estáticas.
+    // Isso garante que nenhum valor seja cortado pelo mecanismo de renderização
+    // de controles nativos do navegador.
+    const liveFields=[...source.querySelectorAll("input,textarea")];
+    const clonedFields=[...clone.querySelectorAll("input,textarea")];
+
+    liveFields.forEach((field,i)=>{
+      const target=clonedFields[i];
+      if(!target)return;
+
+      if(field.type==="radio"||field.type==="checkbox"){
+        if(field.checked)target.checked=true;
+        return;
+      }
+
+      const box=document.createElement("div");
+      box.className=target.className;
+      box.textContent=field.value||"";
+      box.style.cssText=[
+        "white-space:pre-wrap",
+        "word-break:break-word",
+        "overflow:visible",
+        "min-height:"+((field.tagName==="TEXTAREA")?"70px":"30px"),
+        "display:flex",
+        "align-items:"+(field.tagName==="TEXTAREA"?"flex-start":"center"),
+        "width:100%",
+        "background:"+(field.readOnly?"#f2f5f7":"#fbfcfd"),
+        "border:1px solid #dfe6eb",
+        "border-radius:8px",
+        "padding:8px 9px",
+        "color:#16232d",
+        "font-size:9px",
+        "line-height:1.35",
+        "font-family:Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif",
+        "box-sizing:border-box"
+      ].join(";");
+      target.replaceWith(box);
+    });
+
+    // Replica a assinatura atual em imagem.
+    const liveCanvas=source.querySelector("#signature");
+    const clonedCanvas=clone.querySelector("#signature");
+    if(liveCanvas&&clonedCanvas){
+      const img=document.createElement("img");
+      img.src=liveCanvas.toDataURL("image/png");
+      img.alt="Assinatura";
+      img.style.cssText="width:100%;height:105px;display:block;object-fit:contain;background:#fff;";
+      clonedCanvas.replaceWith(img);
+    }
+
+    // Aguarda o layout final.
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+
+    const naturalW=Math.ceil(clone.getBoundingClientRect().width);
+    const naturalH=Math.ceil(clone.scrollHeight);
+
+    if(!naturalW||!naturalH)throw new Error("Dimensões do formulário inválidas.");
+
+    const scale=Math.min(1,CONTENT_W/naturalW,CONTENT_H/naturalH);
+    clone.style.transformOrigin="top left";
+    clone.style.transform="scale("+scale+")";
+
+    await new Promise(resolve=>requestAnimationFrame(resolve));
+
+    const captured=await window.html2canvas(stage,{
       scale:2,
-      width:fullWidth,
-      height:fullHeight,
-      windowWidth:Math.max(document.documentElement.clientWidth,fullWidth),
-      windowHeight:Math.max(document.documentElement.clientHeight,fullHeight),
-      backgroundColor:"#ffffff",
+      width:PAGE_W,
+      height:PAGE_H,
+      backgroundColor:"#fff",
       useCORS:true,
       allowTaint:false,
       logging:false,
+      x:0,
+      y:0,
       scrollX:0,
       scrollY:0,
-      x:0,
-      y:0
+      windowWidth:PAGE_W,
+      windowHeight:PAGE_H
     });
 
-    if(actions)actions.style.display=previousDisplay;
+    stage.remove();
+    stage=null;
 
     const JsPDF=window.jspdf.jsPDF;
     const pdf=new JsPDF({
@@ -228,32 +363,13 @@ document.getElementById("saveAs").onclick=async()=>{
       compress:true
     });
 
-    const A4_W=210;
-    const A4_H=297;
-    const margin=5;
-    const usableW=A4_W-(margin*2);
-    const usableH=A4_H-(margin*2);
-
-    // A imagem inteira é encaixada na folha mantendo exatamente a proporção.
-    const ratio=captured.width/captured.height;
-    let pdfW=usableW;
-    let pdfH=pdfW/ratio;
-
-    if(pdfH>usableH){
-      pdfH=usableH;
-      pdfW=pdfH*ratio;
-    }
-
-    const x=(A4_W-pdfW)/2;
-    const y=(A4_H-pdfH)/2;
-
     pdf.addImage(
-      captured.toDataURL("image/jpeg",0.97),
+      captured.toDataURL("image/jpeg",0.98),
       "JPEG",
-      x,
-      y,
-      pdfW,
-      pdfH,
+      0,
+      0,
+      210,
+      297,
       undefined,
       "FAST"
     );
@@ -278,10 +394,9 @@ document.getElementById("saveAs").onclick=async()=>{
 
   }catch(error){
     console.error("Erro ao gerar PDF:",error);
+    if(stage)stage.remove();
     showMsg("Não foi possível gerar o PDF completo. Atualize a página e tente novamente.",true);
   }finally{
-    const actions=document.querySelector(".client-actions");
-    if(actions)actions.style.display="";
     btn.disabled=false;
     btn.textContent=original;
   }
