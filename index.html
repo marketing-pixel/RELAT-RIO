@@ -10,9 +10,9 @@
   <header class="topbar">
     <div class="brand">
       <img src="https://raw.githubusercontent.com/marketing-pixel/SITE/main/assets/Logo.png" alt="Cortez Móveis">
-      <div class="brand-copy"><strong>ACESSO INTERNO</strong><span>Controle de Relatórios</span></div>
+      <div class="brand-copy"><strong id="brandTitle">ACESSO INTERNO</strong><span id="brandSubtitle">Controle de Relatórios</span></div>
     </div>
-    <div class="internal-badge">Área restrita</div>
+    <div class="internal-badge" id="internalBadge">Área restrita</div>
   </header>
 
   <section class="login" id="internalLogin" hidden>
@@ -83,11 +83,11 @@
         </section>
 
         <div id="message" class="notice"></div>
-        <div class="actions">
-          <button class="btn light" id="saveDraft" type="button">Salvar neste dispositivo</button>
-          <button class="btn primary" id="submit" type="button">Enviar relatório assinado</button>
-        </div>
-      </div>
+        <div class="client-actions">
+          <button class="btn light" id="printReport" type="button">Imprimir</button>
+          <button class="btn light" id="saveAs" type="button">Salvar como</button>
+          <button class="btn primary" id="submit" type="button">Enviar</button>
+        </div>      </div>
     </div>
     <footer class="footer"><span>FVEN003 RELATÓRIO DE SATISFAÇÃO DO CLIENTE_REV02</span><span>Cortez Móveis</span></footer>
   </section>
@@ -132,7 +132,8 @@ async function loadReport(){
   }
 }
 function draftKey(){return "cortez_draft_"+token}
-document.getElementById("saveDraft").onclick=()=>{const o={};ids.forEach(id=>o[id]=document.getElementById(id).value);["atendimento","qualidade","entrega","expectativas"].forEach(n=>o[n]=document.querySelector('input[name="'+n+'"]:checked')?.value||"");o.sig=signed?canvas.toDataURL("image/png"):"";localStorage.setItem(draftKey(),JSON.stringify(o));showMsg("Preenchimento salvo neste dispositivo.",false)};
+document.getElementById("printReport").onclick=()=>window.print();
+document.getElementById("saveAs").onclick=()=>window.print();
 document.getElementById("submit").onclick=async()=>{
   const ratings=["atendimento","qualidade","entrega","expectativas"],payload={};
   for(const n of ratings){payload[n]=document.querySelector('input[name="'+n+'"]:checked')?.value||""}
@@ -162,6 +163,9 @@ async function init(){
     internalLogin.hidden=false;
     return;
   }
+  document.getElementById("brandTitle").textContent="GESTÃO DA QUALIDADE";
+  document.getElementById("brandSubtitle").textContent="FVEN003 · Revisão 02";
+  document.getElementById("internalBadge").textContent="Pesquisa de satisfação";
   reportShell.hidden=false;
   window.addEventListener("resize",()=>resizeCanvas(true));
   resizeCanvas(false);
