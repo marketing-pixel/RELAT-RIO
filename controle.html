@@ -140,7 +140,7 @@ async function loadReports(){const {data,error}=await supabase.from("reports").s
 function date(v){return v?new Date(v).toLocaleString("pt-BR"): "-"}function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
 function makeUrl(token,client="",order="",nf=""){
   const u=new URL(window.location.href);
-  u.pathname=u.pathname.replace(/\/controle\.html$/i,"/cliente.html");
+  u.pathname=u.pathname.replace(/\/controle\.html$/i,"/responder.html");
   u.search=new URLSearchParams({
     token:String(token||"").trim(),
     cliente:String(client||"").trim(),
@@ -208,7 +208,7 @@ document.getElementById("finalize").onclick=async()=>{
   }
 
   const clientUrl=new URL(window.location.href);
-  clientUrl.pathname=clientUrl.pathname.replace(/\/controle\.html$/i,"/cliente.html");
+  clientUrl.pathname=clientUrl.pathname.replace(/\/controle\.html$/i,"/responder.html");
   clientUrl.search=new URLSearchParams({
     token:String(r.public_token||"").trim(),
     cliente:client,
