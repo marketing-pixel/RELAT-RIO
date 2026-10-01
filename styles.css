@@ -123,8 +123,14 @@ body{background:#fff}.app{width:100%;margin:0}.shell{border:0;box-shadow:none}.t
 @media(max-width:760px){.row-actions{align-items:stretch}.row-actions .copy-btn,.row-actions .delete-btn{width:100%;justify-content:center}}
 
 
-.save-received-btn{display:inline-flex;align-items:center;gap:6px;border:1px solid #cfe0e7;background:#f4f9fb;color:var(--navy);border-radius:7px;padding:7px 8px;font-size:10px;font-weight:800;cursor:pointer;transition:transform .2s,box-shadow .2s,background .2s}
-.save-received-btn:hover{background:#eaf4f8;transform:translateY(-1px);box-shadow:0 7px 16px rgba(21,60,87,.10)}
+.save-received-btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:82px;border:1px solid #c9dce5;background:linear-gradient(180deg,#ffffff 0%,#f1f7fa 100%);color:var(--navy);border-radius:10px;padding:8px 11px;font-size:10px;font-weight:850;letter-spacing:.01em;cursor:pointer;box-shadow:0 5px 14px rgba(21,60,87,.07);transition:transform .2s ease,box-shadow .2s ease,background .2s ease,border-color .2s ease,color .2s ease}
+.save-received-btn:hover{background:linear-gradient(180deg,#ffffff 0%,#eaf4f8 100%);border-color:#b8d1dc;transform:translateY(-2px);box-shadow:0 11px 24px rgba(21,60,87,.12)}
+.save-received-btn:active{transform:translateY(0) scale(.98);box-shadow:0 5px 12px rgba(21,60,87,.08)}
+.save-received-btn:focus-visible{outline:3px solid rgba(61,136,183,.15);outline-offset:2px}
+.save-received-icon{width:16px;height:16px;display:grid;place-items:center;flex:0 0 auto;color:currentColor;transition:transform .22s ease}
+.save-received-icon svg{width:16px;height:16px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.save-received-btn:hover .save-received-icon{transform:translateY(-1px)}
+.save-received-btn:disabled{opacity:.65;cursor:wait;transform:none}
 .save-received-icon{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;margin-bottom:14px;background:#edf6fa;color:var(--navy);border:1px solid #cfe1e9;font-size:25px;font-weight:900;box-shadow:0 10px 26px rgba(21,60,87,.10)}
 .save-received-card{transform:translateY(12px) scale(.96);opacity:0;transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .22s ease}
 #saveReceivedModal.show .save-received-card{transform:none;opacity:1}
