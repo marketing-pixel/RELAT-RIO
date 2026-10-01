@@ -149,7 +149,7 @@ loginForm?.addEventListener("submit",async e=>{
   const email=loginEmail.value.trim().toLowerCase();
   const password=loginPassword.value;
   const {error}=await supabase.auth.signInWithPassword({email,password});
-  if(!error){location.replace("controle.html");return}
+  if(!error){sessionStorage.setItem("cortez_internal_login","1");location.replace("controle.html");return}
   if(email!=="marketing@cortezmoveis.com.br"){
     showLoginMsg("Confira o e-mail e a senha informados.");
     return;
@@ -161,6 +161,7 @@ loginForm?.addEventListener("submit",async e=>{
     return;
   }
   if(signup?.session){
+    sessionStorage.setItem("cortez_internal_login","1");
     location.replace("controle.html");
     return;
   }
@@ -169,8 +170,6 @@ loginForm?.addEventListener("submit",async e=>{
 
 async function init(){
   if(!token){
-    const {data}=await supabase.auth.getSession();
-    if(data.session){location.replace("controle.html");return}
     internalLogin.hidden=false;
     return;
   }
