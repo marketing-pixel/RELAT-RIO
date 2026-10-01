@@ -142,6 +142,7 @@ function setVal(id,value){
 }
 
 function initializeReport(){
+  document.getElementById("reportShell").hidden=false;
   if(!token || !client || !order || !invoice){
     document.querySelector(".content").insertAdjacentHTML(
       "afterbegin",
