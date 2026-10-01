@@ -85,14 +85,26 @@ const login=document.getElementById("login"),control=document.getElementById("co
 function msg(el,text,error=true){el.textContent=text;el.className="notice show "+(error?"error":"success")}
 async function session(){
   const {data}=await supabase.auth.getSession();
-  if(data.session){login.hidden=true;control.hidden=false;control.classList.add("is-open");document.body.classList.add("control-open");loadAll()}
+  const loginGranted=sessionStorage.getItem("cortez_internal_login")==="1";
+  if(data.session && loginGranted){
+    login.hidden=true;
+    control.hidden=false;
+    control.classList.add("is-open");
+    document.body.classList.add("control-open");
+    loadAll();
+  }else{
+    login.hidden=false;
+    control.hidden=true;
+    control.classList.remove("is-open");
+    document.body.classList.remove("control-open");
+  }
 }
 document.getElementById("loginForm").onsubmit=async e=>{
   e.preventDefault();
   const email=document.getElementById("email").value.trim().toLowerCase();
   const password=document.getElementById("password").value;
   const {error}=await supabase.auth.signInWithPassword({email,password});
-  if(!error){session();return}
+  if(!error){sessionStorage.setItem("cortez_internal_login","1");session();return}
   if(email!=="marketing@cortezmoveis.com.br"){
     msg(document.getElementById("loginMessage"),"Confira o e-mail e a senha informados.");
     return;
@@ -103,10 +115,10 @@ document.getElementById("loginForm").onsubmit=async e=>{
     msg(document.getElementById("loginMessage"),"Confira o e-mail e a senha informados.");
     return;
   }
-  if(signup?.session){session();return}
+  if(signup?.session){sessionStorage.setItem("cortez_internal_login","1");session();return}
   msg(document.getElementById("loginMessage"),"Acesso criado. Confirme o e-mail recebido para ativar o acesso interno.",false);
 };
-document.getElementById("logout").onclick=async()=>{await supabase.auth.signOut();location.reload()};
+document.getElementById("logout").onclick=async()=>{sessionStorage.removeItem("cortez_internal_login");await supabase.auth.signOut();location.reload()};
 document.querySelectorAll(".workflow-nav .flow-node").forEach(b=>b.onclick=()=>{document.querySelectorAll(".workflow-nav .flow-node").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active");});
 async function loadModel(){const {data,error}=await supabase.from("report_templates").select("*").order("created_at").limit(1).maybeSingle();if(error){msg(document.getElementById("modelMessage"),error.message);return}if(data){m_client.value=data.internal_client||"";m_order.value=data.internal_order||"";m_nf.value=data.internal_invoice||"";m_code.value=data.code||"FVEN003";m_revision.value=data.revision||"02"}}
 async function loadReports(){const {data,error}=await supabase.from("reports").select("id,public_token,status,client_name,pedido,nf,responsavel,sent_at,received_at").order("created_at",{ascending:false});if(error){msg(document.getElementById("modelMessage"),error.message);return}reports=data||[];const out=reports.filter(r=>r.status==="saida"),inc=reports.filter(r=>r.status==="recebido");sTotal.textContent=reports.length;sPending.textContent=out.length;sReceived.textContent=inc.length;saidaBody.innerHTML=out.length?out.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+date(r.sent_at)+'</td><td><span class="pill out">Pendente</span></td><td><button class="copy-btn" data-token="'+r.public_token+'">Copiar</button></td></tr>').join(""):'<tr><td colspan="6">Nenhuma saída cadastrada.</td></tr>';recebidoBody.innerHTML=inc.length?inc.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+esc(r.responsavel||"-")+'</td><td>'+date(r.received_at)+'</td><td><span class="pill in">Recebido</span></td></tr>').join(""):'<tr><td colspan="6">Nenhum relatório recebido.</td></tr>';document.querySelectorAll("[data-token]").forEach(b=>b.onclick=()=>copy(makeUrl(b.dataset.token)))}
