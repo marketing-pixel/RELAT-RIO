@@ -21,9 +21,33 @@
 </div>
 </section>
 
-<section id="control" class="shell" hidden>
+<section id="control" class="shell workspace-overlay" hidden>
 <header class="hero"><div class="eyebrow">CORTEZ MÓVEIS · GESTÃO DA QUALIDADE</div><h1>Controle de Relatórios</h1><p>Prepare o Modelo, gere o link e acompanhe o retorno dos clientes.</p></header>
-<div class="panel-tabs"><button class="active" data-tab="modelo">Modelo</button><button data-tab="saidas">Saídas</button><button data-tab="recebidos">Recebidos</button></div>
+<div class="workflow-nav" aria-label="Fluxo de relatórios">
+  <button class="flow-node" data-tab="saidas" type="button">
+    <span class="flow-dot">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h10a2 2 0 0 1 2 2v12H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Zm0 4h9M7 12h7M7 16h5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M17 8h2a2 2 0 0 1 2 2v8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </span>
+    <span class="flow-label">Saídas</span>
+    <span class="flow-sub">Links enviados</span>
+  </button>
+  <span class="flow-line" aria-hidden="true"></span>
+  <button class="flow-node featured active" data-tab="modelo" type="button">
+    <span class="flow-dot">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3.5h7l3.5 3.5v13.5H7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M14 3.5V7h3.5M9.5 11h5M9.5 14.5h5M9.5 18h3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+    </span>
+    <span class="flow-label">Modelo</span>
+    <span class="flow-sub">Base do relatório</span>
+  </button>
+  <span class="flow-line" aria-hidden="true"></span>
+  <button class="flow-node" data-tab="recebidos" type="button">
+    <span class="flow-dot">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7.5h16v11H4zM4 7.5 8 4h8l4 3.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m8.5 13 2.2 2.2L15.5 10.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+    <span class="flow-label">Recebidos</span>
+    <span class="flow-sub">Retornos dos clientes</span>
+  </button>
+</div>
 <div class="content">
 <div id="modelo" class="panel active">
 <div class="section"><div class="section-title"><div class="number">01</div><div><h2>Modelo do próximo relatório</h2><p>Esses dados são preenchidos pela Cortez e serão bloqueados no link do cliente.</p></div></div>
@@ -61,7 +85,7 @@ const login=document.getElementById("login"),control=document.getElementById("co
 function msg(el,text,error=true){el.textContent=text;el.className="notice show "+(error?"error":"success")}
 async function session(){
   const {data}=await supabase.auth.getSession();
-  if(data.session){login.hidden=true;control.hidden=false;loadAll()}
+  if(data.session){login.hidden=true;control.hidden=false;control.classList.add("is-open");document.body.classList.add("control-open");loadAll()}
 }
 document.getElementById("loginForm").onsubmit=async e=>{
   e.preventDefault();
@@ -83,7 +107,7 @@ document.getElementById("loginForm").onsubmit=async e=>{
   msg(document.getElementById("loginMessage"),"Acesso criado. Confirme o e-mail recebido para ativar o acesso interno.",false);
 };
 document.getElementById("logout").onclick=async()=>{await supabase.auth.signOut();location.reload()};
-document.querySelectorAll(".panel-tabs button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".panel-tabs button").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active");});
+document.querySelectorAll(".workflow-nav .flow-node").forEach(b=>b.onclick=()=>{document.querySelectorAll(".workflow-nav .flow-node").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active");});
 async function loadModel(){const {data,error}=await supabase.from("report_templates").select("*").order("created_at").limit(1).maybeSingle();if(error){msg(document.getElementById("modelMessage"),error.message);return}if(data){m_client.value=data.internal_client||"";m_order.value=data.internal_order||"";m_nf.value=data.internal_invoice||"";m_code.value=data.code||"FVEN003";m_revision.value=data.revision||"02"}}
 async function loadReports(){const {data,error}=await supabase.from("reports").select("id,public_token,status,client_name,pedido,nf,responsavel,sent_at,received_at").order("created_at",{ascending:false});if(error){msg(document.getElementById("modelMessage"),error.message);return}reports=data||[];const out=reports.filter(r=>r.status==="saida"),inc=reports.filter(r=>r.status==="recebido");sTotal.textContent=reports.length;sPending.textContent=out.length;sReceived.textContent=inc.length;saidaBody.innerHTML=out.length?out.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+date(r.sent_at)+'</td><td><span class="pill out">Pendente</span></td><td><button class="copy-btn" data-token="'+r.public_token+'">Copiar</button></td></tr>').join(""):'<tr><td colspan="6">Nenhuma saída cadastrada.</td></tr>';recebidoBody.innerHTML=inc.length?inc.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+esc(r.responsavel||"-")+'</td><td>'+date(r.received_at)+'</td><td><span class="pill in">Recebido</span></td></tr>').join(""):'<tr><td colspan="6">Nenhum relatório recebido.</td></tr>';document.querySelectorAll("[data-token]").forEach(b=>b.onclick=()=>copy(makeUrl(b.dataset.token)))}
 function date(v){return v?new Date(v).toLocaleString("pt-BR"): "-"}function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
