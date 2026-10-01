@@ -169,7 +169,7 @@ document.getElementById("saveAs").onclick=async()=>{
   const original=btn.textContent;
   btn.textContent="Gerando PDF…";
 
-  let clone=null;
+  let stage=null;
 
   try{
     if(!window.jspdf?.jsPDF)throw new Error("Gerador de PDF não carregou.");
@@ -179,41 +179,66 @@ document.getElementById("saveAs").onclick=async()=>{
     if(!source)throw new Error("Formulário não encontrado.");
 
     /*
-     * Faz uma cópia exatamente do que está na tela, incluindo os valores
-     * atuais dos campos e a assinatura.
+     * Cria uma folha A4 virtual em pixels CSS.
+     * Todo o formulário é colocado dentro dela e reduzido proporcionalmente
+     * para caber inteiro, sem cortes horizontais ou verticais.
      */
-    clone=source.cloneNode(true);
-    clone.style.position="absolute";
-    clone.style.left="-100000px";
-    clone.style.top="0";
-    clone.style.width=source.getBoundingClientRect().width+"px";
-    clone.style.maxWidth="none";
-    clone.style.margin="0";
-    clone.style.opacity="1";
-    clone.style.transform="none";
-    clone.style.pointerEvents="none";
-    clone.style.background="#fff";
-    clone.style.height="auto";
-    clone.style.maxHeight="none";
-    clone.style.overflow="visible";
+    const A4_W=794;
+    const A4_H=1123;
+    const PAD=18;
+    const INNER_W=A4_W-(PAD*2);
+    const INNER_H=A4_H-(PAD*2);
 
-    document.body.appendChild(clone);
+    stage=document.createElement("div");
+    stage.style.cssText=[
+      "position:absolute",
+      "left:-100000px",
+      "top:0",
+      "width:"+A4_W+"px",
+      "height:"+A4_H+"px",
+      "overflow:hidden",
+      "background:#fff",
+      "margin:0",
+      "padding:"+PAD+"px",
+      "box-sizing:border-box"
+    ].join(";");
 
-    // Usa a área real do conteúdo, não apenas a área visível da janela.
-    const realWidth=Math.max(clone.scrollWidth,clone.getBoundingClientRect().width,document.documentElement.clientWidth);
-    clone.style.width=realWidth+"px";
+    const clone=source.cloneNode(true);
+    clone.style.cssText=[
+      "display:block",
+      "position:relative",
+      "width:"+INNER_W+"px",
+      "max-width:none",
+      "min-width:0",
+      "height:auto",
+      "max-height:none",
+      "margin:0",
+      "padding:0",
+      "overflow:visible",
+      "background:#fff",
+      "opacity:1",
+      "transform:none",
+      "pointer-events:none"
+    ].join(";");
 
-    // Aguarda o navegador recalcular layout, fontes e campos antes da captura.
-    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+    stage.appendChild(clone);
+    document.body.appendChild(stage);
 
-    // Replica os valores dos campos exatamente como estão preenchidos.
+    /*
+     * Remove elementos interativos que não fazem parte do documento final.
+     */
+    clone.querySelector(".client-actions")?.remove();
+    clone.querySelectorAll("script").forEach(el=>el.remove());
+
+    /*
+     * Replica todos os valores atuais.
+     */
     const liveFields=source.querySelectorAll("input,textarea");
     const clonedFields=clone.querySelectorAll("input,textarea");
 
     liveFields.forEach((field,i)=>{
       const target=clonedFields[i];
       if(!target)return;
-
       target.value=field.value;
 
       if(field.type==="radio"||field.type==="checkbox"){
@@ -222,58 +247,73 @@ document.getElementById("saveAs").onclick=async()=>{
       }
     });
 
-    // Replica a assinatura desenhada.
+    /*
+     * Replica a assinatura atual.
+     */
     const liveCanvas=source.querySelector("#signature");
     const clonedCanvas=clone.querySelector("#signature");
 
     if(liveCanvas&&clonedCanvas){
-      const signatureImage=document.createElement("img");
-      signatureImage.src=liveCanvas.toDataURL("image/png");
-      signatureImage.alt="Assinatura";
-      signatureImage.style.width="100%";
-      signatureImage.style.height="190px";
-      signatureImage.style.display="block";
-      signatureImage.style.objectFit="contain";
-      clonedCanvas.replaceWith(signatureImage);
+      const signatureImg=document.createElement("img");
+      signatureImg.src=liveCanvas.toDataURL("image/png");
+      signatureImg.alt="Assinatura";
+      signatureImg.style.cssText=[
+        "display:block",
+        "width:100%",
+        "height:190px",
+        "object-fit:contain",
+        "background:#fff"
+      ].join(";");
+      clonedCanvas.replaceWith(signatureImg);
     }
 
-    // Os botões não fazem parte do documento salvo.
-    const actions=clone.querySelector(".client-actions");
-    if(actions)actions.remove();
+    // Garante que a cópia use exatamente a largura A4 definida acima.
+    clone.querySelectorAll("*").forEach(el=>{
+      if(el.style.position==="fixed"){
+        el.style.position="absolute";
+      }
+    });
 
-    const captureWidth=Math.ceil(Math.max(
-      clone.scrollWidth,
-      clone.getBoundingClientRect().width
-    ));
-    const captureHeight=Math.ceil(Math.max(
+    // Aguarda o navegador terminar o layout da cópia.
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+
+    const naturalHeight=Math.ceil(Math.max(
       clone.scrollHeight,
       clone.getBoundingClientRect().height
     ));
 
-    const captured=await window.html2canvas(clone,{
-      scale:3,
-      width:captureWidth,
-      height:captureHeight,
+    if(!naturalHeight)throw new Error("O formulário não possui altura para captura.");
+
+    /*
+     * Calcula a escala única para caber toda a página dentro da folha.
+     */
+    const scale=Math.min(1,(INNER_H/naturalHeight));
+
+    clone.style.transformOrigin="top left";
+    clone.style.transform="scale("+scale+")";
+
+    // Aguarda a transformação antes da captura.
+    await new Promise(resolve=>requestAnimationFrame(resolve));
+
+    const captured=await window.html2canvas(stage,{
+      scale:2,
+      width:A4_W,
+      height:A4_H,
       useCORS:true,
       allowTaint:false,
       backgroundColor:"#ffffff",
       logging:false,
-      scrollX:0,
-      scrollY:0,
       x:0,
       y:0,
-      windowWidth:captureWidth,
-      windowHeight:captureHeight
+      scrollX:0,
+      scrollY:0,
+      windowWidth:A4_W,
+      windowHeight:A4_H
     });
 
-    clone.remove();
-    clone=null;
+    stage.remove();
+    stage=null;
 
-    /*
-     * Um único A4.
-     * A imagem inteira é reduzida proporcionalmente até caber na folha,
-     * sem cortar topo, rodapé ou qualquer seção do formulário.
-     */
     const JsPDF=window.jspdf.jsPDF;
     const pdf=new JsPDF({
       orientation:"portrait",
@@ -282,36 +322,22 @@ document.getElementById("saveAs").onclick=async()=>{
       compress:true
     });
 
-    const pageWidth=210;
-    const pageHeight=297;
-    const margin=5;
-    const availableWidth=pageWidth-(margin*2);
-    const availableHeight=pageHeight-(margin*2);
-
-    const sourceRatio=captured.width/captured.height;
-    let pdfWidth=availableWidth;
-    let pdfHeight=pdfWidth/sourceRatio;
-
-    if(pdfHeight>availableHeight){
-      pdfHeight=availableHeight;
-      pdfWidth=pdfHeight*sourceRatio;
-    }
-
-    const x=(pageWidth-pdfWidth)/2;
-    const y=(pageHeight-pdfHeight)/2;
-
     pdf.addImage(
-      captured.toDataURL("image/jpeg",0.94),
+      captured.toDataURL("image/jpeg",0.95),
       "JPEG",
-      x,
-      y,
-      pdfWidth,
-      pdfHeight,
+      0,
+      0,
+      210,
+      297,
       undefined,
       "FAST"
     );
 
-    const safe=value=>String(value||"").replace(/[\\/:*?"<>|]+/g,"_").replace(/\s+/g," ").trim();
+    const safe=value=>String(value||"")
+      .replace(/[\\/:*?"<>|]+/g,"_")
+      .replace(/\s+/g," ")
+      .trim();
+
     const clientName=document.getElementById("client_name").value.trim()||"Cliente";
     const pedido=document.getElementById("pedido").value.trim()||"Sem pedido";
     const filename="Relatorio - "+safe(clientName)+" - Pedido "+safe(pedido)+".pdf";
@@ -323,12 +349,12 @@ document.getElementById("saveAs").onclick=async()=>{
     });
 
     pdf.save(filename);
-    showMsg("PDF salvo em uma única página A4.",false);
+    showMsg("PDF completo salvo em uma única página A4.",false);
 
   }catch(error){
     console.error("Erro ao gerar PDF:",error);
-    if(clone)clone.remove();
-    showMsg("Não foi possível gerar o PDF. Atualize a página e tente novamente.",true);
+    if(stage)stage.remove();
+    showMsg("Não foi possível gerar o PDF completo. Atualize a página e tente novamente.",true);
   }finally{
     btn.disabled=false;
     btn.textContent=original;
