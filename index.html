@@ -10,7 +10,7 @@
 .page{width:min(900px,calc(100% - 24px));margin:24px auto;background:var(--paper);box-shadow:0 8px 28px #0002;padding:28px}
 .header{border:1px solid #222;display:grid;grid-template-columns:1fr 1.7fr;min-height:88px}
 .header-left{display:flex;align-items:center;gap:12px;padding:14px;border-right:1px solid #222}
-.logo{width:48px;height:48px;border-radius:8px;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:800;font-size:28px}
+.logo{width:48px;height:48px;object-fit:contain;display:block}.logo-image{width:110px;height:56px;object-fit:contain;display:block}
 .header-left strong{display:block;font-size:16px}.header-left small{font-size:11px;color:#555}
 .header-right{text-align:center;padding:14px;display:flex;flex-direction:column;justify-content:center}.header-right strong{font-size:18px}.header-right small{margin-top:7px;font-size:11px}
 .top-fields{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #222;border-top:0}.top-fields label{padding:10px 12px;border-right:1px solid #222;font-size:12px;font-weight:700}.top-fields label:last-child{border-right:0}.top-fields .full{grid-column:1/-1;border-right:0;border-bottom:1px solid #222}
@@ -32,7 +32,7 @@ input,textarea{font:inherit;width:100%;border:0;outline:0;background:transparent
 <body>
 <main class="page">
 <header class="header">
-  <div class="header-left"><div class="logo">C</div><div><strong>GESTÃO DA QUALIDADE</strong><small>Cortez Móveis</small></div></div>
+  <div class="header-left"><img class="logo-image" src="https://raw.githubusercontent.com/marketing-pixel/SITE/main/assets/Logo.png" alt="Cortez Móveis"><div><strong>GESTÃO DA QUALIDADE</strong><small>Cortez Móveis</small></div></div>
   <div class="header-right"><strong>RELATÓRIO SATISFAÇÃO DO CLIENTE</strong><small>Código: FVEN003&nbsp;&nbsp;&nbsp; Revisão: 02&nbsp;&nbsp;&nbsp; Página: 1 de 1</small></div>
 </header>
 
