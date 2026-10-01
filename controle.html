@@ -116,7 +116,7 @@ async function ensureSupabase(){
     }
   }
   if(!window.supabase?.createClient)throw new Error("O módulo de autenticação não carregou.");
-  supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+  supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:false}});
   return supabase;
 }
 let reports=[];
@@ -127,6 +127,7 @@ function msg(el,text,error=true){el.textContent=text;el.className="notice show "
 async function session(){
   try{
     await ensureSupabase();
+
     const saved=sessionStorage.getItem("cortez_auth_session");
     if(saved){
       const parsed=JSON.parse(saved);
@@ -139,22 +140,30 @@ async function session(){
         sessionStorage.removeItem("cortez_auth_session");
       }
     }
-  }catch{
-    sessionStorage.removeItem("cortez_auth_session");
-  }
 
-  const {data}=await supabase.auth.getSession();
-  if(data.session){
-    login.hidden=true;
-    control.hidden=false;
-    control.classList.add("is-open");
-    document.body.classList.add("control-open");
-    await loadAll();
-  }else{
+    const {data,error}=await supabase.auth.getSession();
+    if(error) throw error;
+
+    if(data.session){
+      login.hidden=true;
+      control.hidden=false;
+      control.classList.add("is-open");
+      document.body.classList.add("control-open");
+      await loadAll();
+    }else{
+      login.hidden=false;
+      control.hidden=true;
+      control.classList.remove("is-open");
+      document.body.classList.remove("control-open");
+    }
+  }catch(error){
+    sessionStorage.removeItem("cortez_auth_session");
     login.hidden=false;
     control.hidden=true;
     control.classList.remove("is-open");
     document.body.classList.remove("control-open");
+    const loginMessage=document.getElementById("loginMessage");
+    if(loginMessage)msg(loginMessage,error?.message||"Não foi possível inicializar a autenticação.",true);
   }
 }
 document.getElementById("loginForm").onsubmit=async e=>{
