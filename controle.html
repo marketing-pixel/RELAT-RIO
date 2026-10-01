@@ -140,7 +140,7 @@ async function loadReports(){const {data,error}=await supabase.from("reports").s
 function date(v){return v?new Date(v).toLocaleString("pt-BR"): "-"}function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
 function makeUrl(token){
   const u=new URL(window.location.href);
-  u.pathname=u.pathname.replace(/\/controle\.html$/i,"/formulario.html");
+  u.pathname=u.pathname.replace(/\/controle\.html$/i,"/cliente.html");
   u.search=new URLSearchParams({token:String(token||"").trim()}).toString();
   u.hash="";
   return u.href;
@@ -203,7 +203,7 @@ document.getElementById("finalize").onclick=async()=>{
   }
 
   const clientUrl=new URL(window.location.href);
-  clientUrl.pathname=clientUrl.pathname.replace(/\/controle\.html$/i,"/formulario.html");
+  clientUrl.pathname=clientUrl.pathname.replace(/\/controle\.html$/i,"/cliente.html");
   clientUrl.search=new URLSearchParams({token:String(r.public_token||"").trim()}).toString();
   clientUrl.hash="";
   const copied=await copy(clientUrl.href);
