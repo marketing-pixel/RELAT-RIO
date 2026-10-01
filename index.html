@@ -51,7 +51,6 @@
 (() => {
   const SUPABASE_URL = "https://kvxmnbkfscpqnbftqjeu.supabase.co";
   const SUPABASE_KEY = "sb_publishable_Mx-i_T4xREFQuinN-aq3lA_f3jMTFc5";
-  const client = window.supabase?.createClient?.(SUPABASE_URL, SUPABASE_KEY);
 
   const form = document.getElementById("loginForm");
   const emailInput = document.getElementById("loginEmail");
@@ -59,22 +58,20 @@
   const message = document.getElementById("loginMessage");
   const button = document.getElementById("loginButton");
 
-  const showMessage = (text, error = true) => {
+  function showMessage(text, error = true) {
     message.textContent = text;
     message.className = "notice show " + (error ? "error" : "success");
-  };
+  }
 
-  const goToControl = () => {
-    sessionStorage.setItem("cortez_internal_login", "1");
-    window.location.replace("./controle.html");
-  };
+  function redirectToControl(session) {
+    sessionStorage.setItem("cortez_auth_session", JSON.stringify({
+      access_token: session.access_token,
+      refresh_token: session.refresh_token
+    }));
+    window.location.href = "./controle.html";
+  }
 
   async function init() {
-    if (!client) {
-      showMessage("Não foi possível carregar o sistema de autenticação. Atualize a página e tente novamente.");
-      return;
-    }
-
     const token = new URLSearchParams(window.location.search).get("token");
     if (token) {
       const publicUrl = new URL("./cliente.html", window.location.href);
@@ -85,20 +82,19 @@
     }
 
     try {
-      const { data } = await client.auth.getSession();
-      if (data?.session) goToControl();
+      const saved = sessionStorage.getItem("cortez_auth_session");
+      if (!saved) return;
+      const parsed = JSON.parse(saved);
+      if (parsed?.access_token && parsed?.refresh_token) {
+        window.location.replace("./controle.html");
+      }
     } catch {
-      // A tela de login continua disponível mesmo se a sessão não puder ser lida.
+      sessionStorage.removeItem("cortez_auth_session");
     }
   }
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
-
-    if (!client) {
-      showMessage("Sistema de autenticação indisponível neste momento.");
-      return;
-    }
 
     const email = emailInput.value.trim().toLowerCase();
     const password = passwordInput.value;
@@ -108,21 +104,32 @@
     message.className = "notice";
 
     try {
-      const { data, error } = await client.auth.signInWithPassword({ email, password });
+      const response = await fetch(
+        SUPABASE_URL + "/auth/v1/token?grant_type=password",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_KEY
+          },
+          body: JSON.stringify({ email, password })
+        }
+      );
 
-      if (error) {
-        const detail = error.message || "Não foi possível entrar.";
-        showMessage(detail);
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        showMessage(data.error_description || data.msg || data.message || "Não foi possível entrar.");
         return;
       }
 
-      if (!data?.session) {
-        showMessage("Login concluído, mas a sessão não foi criada. Tente novamente.");
+      if (!data.access_token || !data.refresh_token) {
+        showMessage("O servidor autenticou o acesso, mas não retornou uma sessão válida.");
         return;
       }
 
       showMessage("Acesso autorizado. Abrindo o controle…", false);
-      goToControl();
+      redirectToControl(data);
     } catch (error) {
       showMessage(error?.message || "Falha de comunicação com o servidor de autenticação.");
     } finally {
