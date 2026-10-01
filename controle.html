@@ -6,14 +6,14 @@
 <main class="app" id="app">
 <header class="topbar">
 <div class="brand"><img src="https://raw.githubusercontent.com/marketing-pixel/SITE/main/assets/Logo.png" alt="Cortez Móveis"><div class="brand-copy"><strong>CONTROLE DE RELATÓRIOS</strong><span>Gestão da Qualidade</span></div></div>
-<nav class="nav"><a href="controle.html" class="active">Controle</a><a href="index.html">Relatório</a></nav>
+<div class="internal-badge">Área restrita</div>
 </header>
 
 <section id="login" class="login">
 <div class="login-card">
 <h1>Acesso interno</h1><p>Entre com o acesso administrativo do sistema para editar o Modelo, gerar Saídas e acompanhar os Recebidos.</p>
 <form id="loginForm">
-<label class="field">E-mail<input id="email" type="email" autocomplete="username" required></label>
+<label class="field">E-mail<input id="email" type="email" value="marketing@cortezmoveis.com.br" autocomplete="username" required></label>
 <label class="field">Senha<input id="password" type="password" autocomplete="current-password" required></label>
 <div id="loginMessage" class="notice"></div>
 <div class="actions"><button class="btn primary" type="submit">Entrar no controle</button></div>
@@ -63,7 +63,7 @@ async function session(){
   const {data}=await supabase.auth.getSession();
   if(data.session){login.hidden=true;control.hidden=false;loadAll()}
 }
-document.getElementById("loginForm").onsubmit=async e=>{e.preventDefault();const {error}=await supabase.auth.signInWithPassword({email:email.value,password:password.value});if(error)msg(document.getElementById("loginMessage"),error.message);else session()};
+document.getElementById("loginForm").onsubmit=async e=>{e.preventDefault();const {error}=await supabase.auth.signInWithPassword({email:document.getElementById("email").value.trim(),password:document.getElementById("password").value});if(error)msg(document.getElementById("loginMessage"),"E-mail ou senha inválidos.");else session()};
 document.getElementById("logout").onclick=async()=>{await supabase.auth.signOut();location.reload()};
 document.querySelectorAll(".panel-tabs button").forEach(b=>b.onclick=()=>{document.querySelectorAll(".panel-tabs button").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active");});
 async function loadModel(){const {data,error}=await supabase.from("report_templates").select("*").order("created_at").limit(1).maybeSingle();if(error){msg(document.getElementById("modelMessage"),error.message);return}if(data){m_client.value=data.internal_client||"";m_order.value=data.internal_order||"";m_nf.value=data.internal_invoice||"";m_code.value=data.code||"FVEN003";m_revision.value=data.revision||"02"}}
