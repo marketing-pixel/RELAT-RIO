@@ -138,6 +138,174 @@ function showMsg(text,error=true){
   m.textContent=text;
   m.className="notice show "+(error?"error":"success");
 }
+const ratingNames=["atendimento","qualidade","entrega","expectativas"];
+const ratingState={
+  atendimento:"",
+  qualidade:"",
+  entrega:"",
+  expectativas:""
+};
+
+document.querySelectorAll('input[type="radio"][name]').forEach(input=>{
+  input.addEventListener("change",()=>{
+    if(ratingNames.includes(input.name) && input.checked){
+      ratingState[input.name]=input.value;
+    }
+  });
+});
+
+function readRatingState(){
+  ratingNames.forEach(name=>{
+    const checked=document.querySelector('input[name="'+name+'"]:checked');
+    if(checked) ratingState[name]=checked.value;
+  });
+  return {...ratingState};
+}
+
+function buildExportRating(selectedByName){
+  const rows=[
+    ["Atendimento vendas","atendimento"],
+    ["Qualidade produto","qualidade"],
+    ["Entrega no prazo","entrega"],
+    ["Atende as expectativas?","expectativas"]
+  ];
+  const options=["Muito satisfeito","Satisfeito","Insatisfeito"];
+
+  const table=document.createElement("div");
+  table.className="rating export-rating";
+  table.style.cssText=[
+    "width:100%",
+    "max-width:100%",
+    "display:block",
+    "overflow:visible",
+    "border:1px solid #d7e1e7",
+    "border-radius:10px",
+    "background:#fff"
+  ].join(";");
+
+  const head=document.createElement("div");
+  head.className="row head";
+  head.style.cssText=[
+    "width:100%",
+    "display:grid",
+    "grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr))",
+    "min-height:38px",
+    "border-bottom:1px solid #d7e1e7",
+    "margin:0"
+  ].join(";");
+
+  ["Quesito",...options].forEach((label,index)=>{
+    const cell=document.createElement("div");
+    cell.textContent=label;
+    cell.style.cssText=[
+      "display:flex",
+      "align-items:center",
+      "justify-content:center",
+      "text-align:center",
+      "padding:6px",
+      "min-width:0",
+      "font:700 8px/1.2 Inter,Arial,sans-serif",
+      "color:#153c57",
+      "background:#f4f8fa",
+      "border-right:"+(index<3?"1px solid #d7e1e7":"0")
+    ].join(";");
+    if(index===0){
+      cell.style.justifyContent="flex-start";
+      cell.style.textAlign="left";
+    }
+    head.appendChild(cell);
+  });
+  table.appendChild(head);
+
+  rows.forEach(([label,name],rowIndex)=>{
+    const row=document.createElement("div");
+    row.className="row";
+    row.style.cssText=[
+      "width:100%",
+      "display:grid",
+      "grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr))",
+      "min-height:40px",
+      "margin:0",
+      "border-bottom:"+(rowIndex<rows.length-1?"1px solid #e3eaee":"0")
+    ].join(";");
+
+    const labelCell=document.createElement("div");
+    labelCell.textContent=label;
+    labelCell.style.cssText=[
+      "display:flex",
+      "align-items:center",
+      "justify-content:flex-start",
+      "padding:7px",
+      "min-width:0",
+      "font:600 8px/1.25 Inter,Arial,sans-serif",
+      "color:#24343f",
+      "border-right:1px solid #e3eaee",
+      "background:#fff"
+    ].join(";");
+    row.appendChild(labelCell);
+
+    options.forEach(option=>{
+      const selected=selectedByName[name]===option;
+
+      const cell=document.createElement("div");
+      cell.className="choice export-choice";
+      cell.setAttribute("data-selected",selected?"true":"false");
+      cell.style.cssText=[
+        "display:flex",
+        "align-items:center",
+        "justify-content:center",
+        "min-width:0",
+        "min-height:40px",
+        "padding:6px",
+        "background:"+(selected?"#eaf3f8":"#fff"),
+        "border-right:1px solid #e3eaee",
+        "box-shadow:"+(selected?"inset 0 0 0 1.5px #153c57":"none")
+      ].join(";");
+
+      const marker=document.createElement("div");
+      marker.textContent=selected?"✓":"";
+      marker.style.cssText=[
+        "width:16px",
+        "height:16px",
+        "border-radius:50%",
+        "display:flex",
+        "align-items:center",
+        "justify-content:center",
+        "box-sizing:border-box",
+        "border:"+(selected?"3px solid #153c57":"1.5px solid #b8c6ce"),
+        "background:"+(selected?"#153c57":"#fff"),
+        "color:"+(selected?"#fff":"transparent"),
+        "font:700 10px/16px Arial,sans-serif",
+        "flex:0 0 16px"
+      ].join(";");
+      cell.appendChild(marker);
+
+      if(selected){
+        const sr=document.createElement("span");
+        sr.textContent="Selecionado";
+        sr.style.cssText=[
+          "position:absolute",
+          "width:1px",
+          "height:1px",
+          "padding:0",
+          "margin:-1px",
+          "overflow:hidden",
+          "clip:rect(0,0,0,0)",
+          "white-space:nowrap",
+          "border:0"
+        ].join(";");
+        cell.appendChild(sr);
+      }
+
+      row.appendChild(cell);
+    });
+
+    table.appendChild(row);
+  });
+
+  return table;
+}
+
 function setVal(id,value){
   const el=document.getElementById(id);
   if(el)el.value=value||"";
@@ -272,54 +440,12 @@ document.getElementById("saveAs").onclick=async()=>{
     ].join("");
     clone.prepend(pdfCss);
 
-    // Transforma inputs e textareas em caixas de texto estáticas.
-    // Isso garante que nenhum valor seja cortado pelo mecanismo de renderização
-    // de controles nativos do navegador.
-    ["atendimento","qualidade","entrega","expectativas"].forEach(name=>{
-      const selectedValue=source.querySelector('input[name="'+name+'"]:checked')?.value||"";
-      clone.querySelectorAll('input[name="'+name+'"]').forEach(input=>{
-        const choice=input.closest(".choice");
-        if(!choice)return;
-        const selected=input.value===selectedValue;
-        choice.innerHTML=selected
-          ? '<span class="export-dot" aria-hidden="true" style="width:14px;height:14px;border-radius:50%;display:block;box-sizing:border-box;border:3px solid #153c57;background:#153c57;box-shadow:inset 0 0 0 2px #fff,0 1px 3px rgba(21,60,87,.18)"></span>'
-          : '<span class="export-dot" aria-hidden="true" style="width:14px;height:14px;border-radius:50%;display:block;box-sizing:border-box;border:1.5px solid #b8c6ce;background:#fff"></span>';
-      });
-    });
-
+    // As respostas já ficam armazenadas em ratingState no momento do clique.
+    // A tabela exportada é criada do zero e não contém nenhum input/radio.
+    const selectedByName=readRatingState();
     const rating=clone.querySelector("#ratings");
     if(rating){
-      const selectedByName={};
-      ["atendimento","qualidade","entrega","expectativas"].forEach(name=>{
-        selectedByName[name]=source.querySelector('input[name="'+name+'"]:checked')?.value||"";
-      });
-
-      const rows=[
-        ["Atendimento vendas","atendimento"],
-        ["Qualidade produto","qualidade"],
-        ["Entrega no prazo","entrega"],
-        ["Atende as expectativas?","expectativas"]
-      ];
-      const options=["Muito satisfeito","Satisfeito","Insatisfeito"];
-
-      const staticRating=document.createElement("div");
-      staticRating.className="rating export-rating";
-      staticRating.innerHTML=
-        '<div class="row head"><div class="label">Quesito</div><div>Muito satisfeito</div><div>Satisfeito</div><div>Insatisfeito</div></div>'+
-        rows.map(([label,name])=>{
-          return '<div class="row"><div class="label">'+label+'</div>'+
-            options.map(option=>{
-              const selected=selectedByName[name]===option;
-              return '<div class="choice export-choice">'+
-                (selected
-                  ? '<span class="export-check" aria-hidden="true" style="display:grid;place-items:center;width:15px;height:15px;border-radius:50%;background:#153c57;color:#fff;font:700 10px/15px Arial,sans-serif;">✓</span>'
-                  : '<span class="export-empty" aria-hidden="true" style="display:block;width:15px;height:15px;border-radius:50%;border:1.5px solid #b8c6ce;background:#fff;"></span>')+
-              '</div>';
-            }).join("")+
-          '</div>';
-        }).join("");
-
-      rating.replaceWith(staticRating);
+      rating.replaceWith(buildExportRating(selectedByName));
     }
 
     const liveFields=[...source.querySelectorAll('input:not([type="radio"]):not([type="checkbox"]),textarea')];
