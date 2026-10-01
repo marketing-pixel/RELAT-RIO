@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Controle de Relatórios - Cortez Móveis</title>
+<style>
+:root{--blue:#173f5d;--blue2:#245e84;--bg:#eef1f3;--paper:#fff;--line:#d8e0e5;--text:#18252e;--muted:#6b7a84;--green:#2f7f5f}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(180deg,#f7fafc,#eef1f3);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
+.site-nav{width:min(1100px,calc(100% - 28px));margin:18px auto 0;display:flex;justify-content:space-between;align-items:center;gap:10px}.site-nav .links{display:flex;gap:7px}.site-nav a{padding:9px 13px;border-radius:7px;text-decoration:none;color:#4f606b;font-size:13px;font-weight:700}.site-nav a.active,.site-nav a:hover{background:var(--blue);color:#fff}
+.app{width:min(1100px,calc(100% - 28px));margin:14px auto 40px}.hero{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;padding:26px 28px;border-radius:16px;background:var(--blue);color:#fff;box-shadow:0 10px 30px #173f5d22}.hero h1{margin:0;font-size:28px}.hero p{margin:7px 0 0;opacity:.78;font-size:13px}.hero button{border:0;border-radius:8px;padding:11px 15px;background:#fff;color:var(--blue);font-weight:800;cursor:pointer}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin:16px 0}.stat{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:17px}.stat span{display:block;color:var(--muted);font-size:12px}.stat strong{display:block;margin-top:6px;font-size:25px;color:var(--blue)}
+.section{background:var(--paper);border:1px solid var(--line);border-radius:14px;margin-top:16px;overflow:hidden}.section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 18px;border-bottom:1px solid var(--line)}.section-head h2{margin:0;color:var(--blue);font-size:18px}.section-head span{font-size:12px;color:var(--muted)}
+.table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:13px 14px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}th{background:#f6f8f9;color:#53636d;font-size:11px;text-transform:uppercase;letter-spacing:.04em}tr:last-child td{border-bottom:0}.empty{padding:24px;text-align:center;color:var(--muted);font-size:13px}
+.status{display:inline-block;padding:5px 8px;border-radius:999px;font-size:11px;font-weight:800}.status.saida{background:#fff3df;color:#98601e}.status.recebido{background:#eaf7f0;color:var(--green)}
+.actions{display:flex;gap:7px}.small{border:1px solid var(--line);border-radius:7px;background:#fff;padding:7px 9px;cursor:pointer;font-size:11px;font-weight:700;color:#41535f}.small.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+dialog{border:0;border-radius:14px;padding:0;width:min(520px,calc(100% - 24px));box-shadow:0 30px 80px #0004}dialog::backdrop{background:#0b1d294f}.modal{padding:22px}.modal h2{margin:0 0 16px;color:var(--blue)}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:6px;font-size:12px;font-weight:700}.field.full{grid-column:1/-1}.field input{padding:11px;border:1px solid var(--line);border-radius:8px;outline:0}.field input:focus{border-color:var(--blue)}.modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}.modal-actions button{border:0;border-radius:8px;padding:10px 14px;font-weight:800;cursor:pointer}.cancel{background:#e9eef1;color:#40515c}.create{background:var(--blue);color:#fff}
+.link-box{margin-top:13px;padding:11px;border-radius:8px;background:#f2f6f8;word-break:break-all;font-size:12px;color:#4d606b}.copy{margin-top:9px;border:0;border-radius:7px;padding:8px 10px;background:var(--blue);color:#fff;font-weight:800;cursor:pointer}
+@media(max-width:720px){.hero{flex-direction:column;align-items:stretch}.stats{grid-template-columns:1fr}.grid{grid-template-columns:1fr}.field.full{grid-column:auto}.site-nav{flex-direction:column;align-items:stretch}}
+</style>
+</head>
+<body>
+<nav class="site-nav"><div class="links"><a href="index.html">Relatório</a><a href="controle.html" class="active">Controle de Relatórios</a></div></nav>
+
+<main class="app">
+<section class="hero">
+<div><h1>Controle de Relatórios</h1><p>Acompanhe os relatórios enviados para clientes e os que já retornaram assinados.</p></div>
+<button id="newReport">+ Nova saída</button>
+</section>
+
+<section class="stats">
+<div class="stat"><span>Total de saídas</span><strong id="countSaidas">0</strong></div>
+<div class="stat"><span>Recebidos assinados</span><strong id="countRecebidos">0</strong></div>
+<div class="stat"><span>Pendentes</span><strong id="countPendentes">0</strong></div>
+</section>
+
+<section class="section">
+<div class="section-head"><h2>Saídas</h2><span>Relatórios enviados para preenchimento</span></div>
+<div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Pedido</th><th>NF</th><th>Data de envio</th><th>Status</th><th>Ações</th></tr></thead><tbody id="saidasBody"></tbody></table><div id="saidasEmpty" class="empty">Nenhum relatório enviado ainda.</div></div>
+</section>
+
+<section class="section">
+<div class="section-head"><h2>Recebidos</h2><span>Relatórios preenchidos e assinados</span></div>
+<div class="table-wrap"><table><thead><tr><th>Cliente</th><th>Pedido</th><th>NF</th><th>Responsável</th><th>Data de recebimento</th><th>Status</th></tr></thead><tbody id="recebidosBody"></tbody></table><div id="recebidosEmpty" class="empty">Nenhum relatório recebido ainda.</div></div>
+</section>
+</main>
+
+<dialog id="dialog">
+<form method="dialog" class="modal" id="newReportForm">
+<h2>Nova saída de relatório</h2>
+<div class="grid">
+<label class="field full">Cliente / Empresa<input id="cliente" required></label>
+<label class="field">Pedido nº<input id="pedido" required></label>
+<label class="field">NF nº<input id="nf" required></label>
+</div>
+<div class="modal-actions"><button class="cancel" value="cancel">Cancelar</button><button class="create" id="create" value="default">Criar relatório</button></div>
+<div id="generated" hidden><div class="link-box" id="link"></div><button type="button" class="copy" id="copy">Copiar link</button></div>
+</form>
+</dialog>
+
+<script>
+const KEY='cortez_relatorios_controle_v1';
+const dialog=document.getElementById('dialog');
+function getAll(){try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch{return[]}}
+function saveAll(v){localStorage.setItem(KEY,JSON.stringify(v))}
+function fmt(iso){if(!iso)return'-';return new Date(iso).toLocaleDateString('pt-BR')}
+function render(){
+ const all=getAll(), recebidos=all.filter(x=>x.status==='recebido'), saidas=all.filter(x=>x.status!=='recebido');
+ document.getElementById('countSaidas').textContent=all.length;
+ document.getElementById('countRecebidos').textContent=recebidos.length;
+ document.getElementById('countPendentes').textContent=saidas.length;
+ const sb=document.getElementById('saidasBody'),rb=document.getElementById('recebidosBody');
+ sb.innerHTML='';rb.innerHTML='';
+ saidas.forEach(x=>{const tr=document.createElement('tr');tr.innerHTML='<td>'+esc(x.cliente)+'</td><td>'+esc(x.pedido)+'</td><td>'+esc(x.nf)+'</td><td>'+fmt(x.criadoEm)+'</td><td><span class="status saida">Pendente</span></td><td class="actions"><button class="small primary" data-copy="'+x.id+'">Copiar link</button><a class="small" href="index.html?id='+encodeURIComponent(x.id)+'" target="_blank">Abrir</a></td>';sb.appendChild(tr)});
+ recebidos.forEach(x=>{const tr=document.createElement('tr');tr.innerHTML='<td>'+esc(x.cliente)+'</td><td>'+esc(x.pedido)+'</td><td>'+esc(x.nf)+'</td><td>'+esc(x.responsavel||'-')+'</td><td>'+fmt(x.finalizadoEm)+'</td><td><span class="status recebido">Recebido</span></td>';rb.appendChild(tr)});
+ document.getElementById('saidasEmpty').style.display=saidas.length?'none':'block';document.getElementById('recebidosEmpty').style.display=recebidos.length?'none':'block';
+ document.querySelectorAll('[data-copy]').forEach(b=>b.onclick=()=>copyLink(b.dataset.copy));
+}
+function esc(s){return String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
+function urlFor(id){return location.href.replace(/controle\.html.*$/,'index.html')+'?id='+encodeURIComponent(id)}
+async function copyLink(id){try{await navigator.clipboard.writeText(urlFor(id));alert('Link copiado.')}catch{prompt('Copie o link:',urlFor(id))}}
+document.getElementById('newReport').onclick=()=>{document.getElementById('generated').hidden=true;document.getElementById('newReportForm').reset();dialog.showModal()};
+document.getElementById('create').onclick=e=>{
+ e.preventDefault();
+ const cliente=document.getElementById('cliente').value.trim(),pedido=document.getElementById('pedido').value.trim(),nf=document.getElementById('nf').value.trim();
+ if(!cliente||!pedido||!nf){alert('Preencha cliente, pedido e NF.');return}
+ const id='R-'+Date.now().toString(36).toUpperCase();
+ const all=getAll();all.unshift({id,cliente,pedido,nf,status:'saida',criadoEm:new Date().toISOString()});saveAll(all);
+ const url=urlFor(id);document.getElementById('link').textContent=url;document.getElementById('generated').hidden=false;render();
+};
+document.getElementById('copy').onclick=()=>{const link=document.getElementById('link').textContent; navigator.clipboard?.writeText(link);alert('Link copiado.')};
+window.addEventListener('storage',render);render();
+</script>
+</body>
+</html>
