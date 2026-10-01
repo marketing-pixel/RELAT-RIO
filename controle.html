@@ -87,9 +87,8 @@
 </div>
 
 <script type="module">
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, ImageRun } from "https://esm.sh/docx@9.8.1";
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
 let reports=[];
 const login=document.getElementById("login"),control=document.getElementById("control");
@@ -98,8 +97,7 @@ const modelMessageEl=document.getElementById("modelMessage"),sTotalEl=document.g
 function msg(el,text,error=true){el.textContent=text;el.className="notice show "+(error?"error":"success")}
 async function session(){
   const {data}=await supabase.auth.getSession();
-  const loginGranted=sessionStorage.getItem("cortez_internal_login")==="1";
-  if(data.session && loginGranted){
+  if(data.session){
     login.hidden=true;
     control.hidden=false;
     control.classList.add("is-open");
@@ -225,6 +223,7 @@ async function saveReceivedPdf(report){
   pdf.save("Relatorio - "+safeFileName(report.client_name||"Cliente")+" - Pedido "+safeFileName(report.pedido||"Sem pedido")+".pdf");
 }
 async function saveReceivedWord(report){
+  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, ImageRun } = await import("https://esm.sh/docx@9.8.1");
   const dataUrl=report.assinatura_data_url||"";
   const children=[
     new Paragraph({text:"PESQUISA DE SATISFAÇÃO",heading:HeadingLevel.TITLE,alignment:AlignmentType.CENTER}),
