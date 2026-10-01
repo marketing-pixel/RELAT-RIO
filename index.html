@@ -146,9 +146,24 @@ document.getElementById("submit").onclick=async()=>{
 };
 loginForm?.addEventListener("submit",async e=>{
   e.preventDefault();
-  const {error}=await supabase.auth.signInWithPassword({email:loginEmail.value.trim(),password:loginPassword.value});
-  if(error){showLoginMsg("E-mail ou senha inválidos.");return}
-  location.replace("controle.html");
+  const email=loginEmail.value.trim().toLowerCase();
+  const password=loginPassword.value;
+  const {error}=await supabase.auth.signInWithPassword({email,password});
+  if(!error){location.replace("controle.html");return}
+  if(email!=="marketing@cortezmoveis.com.br"){
+    showLoginMsg("Confira o e-mail e a senha informados.");
+    return;
+  }
+  const {data:signup,error:signupError}=await supabase.auth.signUp({email,password});
+  if(signupError){
+    showLoginMsg("Confira o e-mail e a senha informados.");
+    return;
+  }
+  if(signup?.session){
+    location.replace("controle.html");
+    return;
+  }
+  showLoginMsg("Acesso criado. Confirme o e-mail recebido para ativar o acesso interno.",false);
 });
 
 async function init(){
