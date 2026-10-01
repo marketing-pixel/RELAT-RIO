@@ -114,7 +114,7 @@ canvas.addEventListener("pointermove",e=>{if(!drawing)return;const p=pos(e);ctx.
 document.getElementById("clearSig").onclick=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);signed=false};
 function showMsg(text,error=true){const m=document.getElementById("message");m.textContent=text;m.className="notice show "+(error?"error":"success")}
 function showLoginMsg(text,error=true){loginMessage.textContent=text;loginMessage.className="notice show "+(error?"error":"success")}
-function lockAll(){document.querySelectorAll("#formArea input,#formArea textarea").forEach(el=>{if(!["client_name","pedido","nf"].includes(el.id))el.disabled=true});document.querySelector("#clearSig").disabled=true;document.getElementById("submit").hidden=true;document.getElementById("saveDraft").hidden=true}
+function lockAll(){document.querySelectorAll("#formArea input,#formArea textarea").forEach(el=>{if(!["client_name","pedido","nf"].includes(el.id))el.disabled=true});document.querySelector("#clearSig").disabled=true;document.getElementById("submit").hidden=true}
 function setVal(id,v){const el=document.getElementById(id);if(el&&v!=null)el.value=v}
 async function loadReport(){
   if(!token){document.getElementById("loading").className="notice";document.getElementById("invalid").className="notice show error";return}
