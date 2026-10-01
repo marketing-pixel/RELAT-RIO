@@ -169,175 +169,56 @@ document.getElementById("saveAs").onclick=async()=>{
   const original=btn.textContent;
   btn.textContent="Gerando PDF…";
 
-  let stage=null;
-
   try{
     if(!window.jspdf?.jsPDF)throw new Error("Gerador de PDF não carregou.");
     if(!window.html2canvas)throw new Error("Captura do formulário não carregou.");
 
+    /*
+     * Captura diretamente o conteúdo real da página.
+     * Não é feita nenhuma reconstrução do layout e nada é recortado antes
+     * da captura. Depois, a imagem inteira é reduzida proporcionalmente
+     * para uma única folha A4.
+     */
     const source=document.querySelector(".app");
     if(!source)throw new Error("Formulário não encontrado.");
 
-    /*
-     * Cria uma folha A4 virtual em pixels CSS.
-     * Todo o formulário é colocado dentro dela e reduzido proporcionalmente
-     * para caber inteiro, sem cortes horizontais ou verticais.
-     */
-    const A4_W=794;
-    const A4_H=1123;
-    const PAD=18;
-    const INNER_W=A4_W-(PAD*2);
-    const INNER_H=A4_H-(PAD*2);
+    const actions=document.querySelector(".client-actions");
+    const previousDisplay=actions?.style.display||"";
+    if(actions)actions.style.display="none";
 
-    stage=document.createElement("div");
-    stage.style.cssText=[
-      "position:absolute",
-      "left:-100000px",
-      "top:0",
-      "width:"+A4_W+"px",
-      "height:"+A4_H+"px",
-      "overflow:hidden",
-      "background:#fff",
-      "margin:0",
-      "padding:"+PAD+"px",
-      "box-sizing:border-box"
-    ].join(";");
+    // Aguarda fontes e imagens terminarem de carregar.
+    if(document.fonts?.ready)await document.fonts.ready;
+    await Promise.all([...document.images].map(img=>{
+      if(img.complete)return Promise.resolve();
+      return new Promise(resolve=>{
+        img.addEventListener("load",resolve,{once:true});
+        img.addEventListener("error",resolve,{once:true});
+      });
+    }));
 
-    const clone=source.cloneNode(true);
-    clone.style.cssText=[
-      "display:block",
-      "position:relative",
-      "width:"+INNER_W+"px",
-      "max-width:none",
-      "min-width:0",
-      "height:auto",
-      "max-height:none",
-      "margin:0",
-      "padding:0",
-      "overflow:visible",
-      "background:#fff",
-      "opacity:1",
-      "transform:none",
-      "pointer-events:none"
-    ].join(";");
+    const rect=source.getBoundingClientRect();
+    const fullWidth=Math.ceil(Math.max(source.scrollWidth,rect.width));
+    const fullHeight=Math.ceil(Math.max(source.scrollHeight,rect.height));
 
-    stage.appendChild(clone);
-    document.body.appendChild(stage);
+    if(!fullWidth||!fullHeight)throw new Error("Dimensões do formulário inválidas.");
 
-    // Força o layout completo a caber dentro da largura A4 virtual.
-    const fitStyle=document.createElement("style");
-    fitStyle.textContent=[
-      ".app{width:100%!important;max-width:none!important;margin:0!important}",
-      ".shell{width:100%!important;max-width:none!important}",
-      ".content{width:100%!important}",
-      ".hero,.content{box-sizing:border-box}",
-      ".rating{width:100%!important;overflow:visible!important}",
-      ".row{min-width:0!important;width:100%!important;grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr))!important}",
-      ".row>div,.choice{min-width:0!important}",
-      ".field input,.field textarea{min-width:0!important;max-width:100%!important}",
-      ".grid{width:100%!important;min-width:0!important}",
-      ".footer{width:100%!important;box-sizing:border-box}"
-    ].join("");
-    clone.prepend(fitStyle);
-
-    /*
-     * Remove elementos interativos que não fazem parte do documento final.
-     */
-    clone.querySelector(".client-actions")?.remove();
-    clone.querySelectorAll("script").forEach(el=>el.remove());
-
-    /*
-     * Replica todos os valores atuais.
-     */
-    const liveFields=source.querySelectorAll("input,textarea");
-    const clonedFields=clone.querySelectorAll("input,textarea");
-
-    liveFields.forEach((field,i)=>{
-      const target=clonedFields[i];
-      if(!target)return;
-      target.value=field.value;
-
-      if(field.type==="radio"||field.type==="checkbox"){
-        if(field.checked)target.setAttribute("checked","");
-        else target.removeAttribute("checked");
-      }
-    });
-
-    /*
-     * Replica a assinatura atual.
-     */
-    const liveCanvas=source.querySelector("#signature");
-    const clonedCanvas=clone.querySelector("#signature");
-
-    if(liveCanvas&&clonedCanvas){
-      const signatureImg=document.createElement("img");
-      signatureImg.src=liveCanvas.toDataURL("image/png");
-      signatureImg.alt="Assinatura";
-      signatureImg.style.cssText=[
-        "display:block",
-        "width:100%",
-        "height:190px",
-        "object-fit:contain",
-        "background:#fff"
-      ].join(";");
-      clonedCanvas.replaceWith(signatureImg);
-    }
-
-    // Garante que a cópia use exatamente a largura A4 definida acima.
-    clone.querySelectorAll("*").forEach(el=>{
-      if(el.style.position==="fixed"){
-        el.style.position="absolute";
-      }
-    });
-
-    // Aguarda o navegador terminar o layout da cópia.
-    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
-
-    const naturalHeight=Math.ceil(Math.max(
-      clone.scrollHeight,
-      clone.getBoundingClientRect().height
-    ));
-
-    if(!naturalHeight)throw new Error("O formulário não possui altura para captura.");
-
-    /*
-     * Calcula a escala única para caber toda a página dentro da folha.
-     */
-    const naturalWidth=Math.ceil(Math.max(
-      clone.scrollWidth,
-      clone.getBoundingClientRect().width
-    ));
-
-    const scale=Math.min(
-      1,
-      INNER_W/naturalWidth,
-      INNER_H/naturalHeight
-    );
-
-    clone.style.transformOrigin="top left";
-    clone.style.transform="scale("+scale+")";
-
-    // Aguarda a transformação antes da captura.
-    await new Promise(resolve=>requestAnimationFrame(resolve));
-
-    const captured=await window.html2canvas(stage,{
+    const captured=await window.html2canvas(source,{
       scale:2,
-      width:A4_W,
-      height:A4_H,
+      width:fullWidth,
+      height:fullHeight,
+      windowWidth:Math.max(document.documentElement.clientWidth,fullWidth),
+      windowHeight:Math.max(document.documentElement.clientHeight,fullHeight),
+      backgroundColor:"#ffffff",
       useCORS:true,
       allowTaint:false,
-      backgroundColor:"#ffffff",
       logging:false,
-      x:0,
-      y:0,
       scrollX:0,
       scrollY:0,
-      windowWidth:A4_W,
-      windowHeight:A4_H
+      x:0,
+      y:0
     });
 
-    stage.remove();
-    stage=null;
+    if(actions)actions.style.display=previousDisplay;
 
     const JsPDF=window.jspdf.jsPDF;
     const pdf=new JsPDF({
@@ -347,13 +228,32 @@ document.getElementById("saveAs").onclick=async()=>{
       compress:true
     });
 
+    const A4_W=210;
+    const A4_H=297;
+    const margin=5;
+    const usableW=A4_W-(margin*2);
+    const usableH=A4_H-(margin*2);
+
+    // A imagem inteira é encaixada na folha mantendo exatamente a proporção.
+    const ratio=captured.width/captured.height;
+    let pdfW=usableW;
+    let pdfH=pdfW/ratio;
+
+    if(pdfH>usableH){
+      pdfH=usableH;
+      pdfW=pdfH*ratio;
+    }
+
+    const x=(A4_W-pdfW)/2;
+    const y=(A4_H-pdfH)/2;
+
     pdf.addImage(
-      captured.toDataURL("image/jpeg",0.95),
+      captured.toDataURL("image/jpeg",0.97),
       "JPEG",
-      0,
-      0,
-      210,
-      297,
+      x,
+      y,
+      pdfW,
+      pdfH,
       undefined,
       "FAST"
     );
@@ -378,9 +278,10 @@ document.getElementById("saveAs").onclick=async()=>{
 
   }catch(error){
     console.error("Erro ao gerar PDF:",error);
-    if(stage)stage.remove();
     showMsg("Não foi possível gerar o PDF completo. Atualize a página e tente novamente.",true);
   }finally{
+    const actions=document.querySelector(".client-actions");
+    if(actions)actions.style.display="";
     btn.disabled=false;
     btn.textContent=original;
   }
