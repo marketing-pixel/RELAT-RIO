@@ -1,1 +1,97 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Relatório de Satisfação do Cliente</title></head><body><h1>Relatório de Satisfação do Cliente</h1><p>Projeto inicial da Cortez Móveis.</p></body></html>
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Relatório de Satisfação do Cliente - Cortez Móveis</title>
+<style>
+:root{--blue:#173f5d;--line:#7c8790;--paper:#fff;--bg:#eef1f3;--text:#15191c}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
+.page{width:min(900px,calc(100% - 24px));margin:24px auto;background:var(--paper);box-shadow:0 8px 28px #0002;padding:28px}
+.header{border:1px solid #222;display:grid;grid-template-columns:1fr 1.7fr;min-height:88px}
+.header-left{display:flex;align-items:center;gap:12px;padding:14px;border-right:1px solid #222}
+.logo{width:48px;height:48px;border-radius:8px;background:var(--blue);color:#fff;display:grid;place-items:center;font-weight:800;font-size:28px}
+.header-left strong{display:block;font-size:16px}.header-left small{font-size:11px;color:#555}
+.header-right{text-align:center;padding:14px;display:flex;flex-direction:column;justify-content:center}.header-right strong{font-size:18px}.header-right small{margin-top:7px;font-size:11px}
+.top-fields{display:grid;grid-template-columns:1fr 1fr;gap:0;border:1px solid #222;border-top:0}.top-fields label{padding:10px 12px;border-right:1px solid #222;font-size:12px;font-weight:700}.top-fields label:last-child{border-right:0}.top-fields .full{grid-column:1/-1;border-right:0;border-bottom:1px solid #222}
+input,textarea{font:inherit;width:100%;border:0;outline:0;background:transparent;color:#111}input{padding:4px 0}textarea{resize:vertical;min-height:120px;border:1px solid #999;padding:10px;margin-top:8px;background:#fff}
+.intro{font-size:13px;line-height:1.55;margin:20px 0}.intro p{margin:8px 0}
+.rating{border-collapse:collapse;width:100%;font-size:13px}.rating th,.rating td{border:1px solid #222;padding:10px 7px;text-align:center}.rating th{font-weight:700}.rating td:first-child,.rating th:first-child{text-align:left;width:47%}.rating input{width:18px;height:18px;accent-color:var(--blue)}
+.comment{margin-top:20px;font-size:13px}.comment-title{font-weight:700;margin-bottom:3px}
+.bottom{margin-top:20px;display:grid;grid-template-columns:1.4fr .8fr .7fr;gap:14px}.field{font-size:12px;font-weight:700}.field input{border-bottom:1px solid #777;margin-top:12px;padding:5px 2px}
+.signature-wrap{margin-top:20px;border:1px solid #999}.sig-head{display:flex;justify-content:space-between;align-items:center;padding:9px 10px;background:#f5f5f5;border-bottom:1px solid #bbb;font-size:12px}.sig-head button{border:0;padding:6px 10px;border-radius:5px;cursor:pointer}
+#signature{display:block;width:100%;height:170px;touch-action:none;background:#fff}
+.sig-caption{padding:0 10px 10px;text-align:center;font-size:11px;color:#555}
+.actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}.actions button{border:0;border-radius:6px;padding:11px 16px;cursor:pointer;font-weight:700}.primary{background:var(--blue);color:#fff}.secondary{background:#e7eaed}
+.message{margin-top:12px;font-size:12px;color:#a22}.success{margin-top:14px;padding:12px;background:#edf8ef;border:1px solid #b7d8bd;font-size:12px}
+.footer{display:flex;justify-content:space-between;border-top:1px solid #222;margin-top:24px;padding-top:8px;font-size:10px;color:#555}
+@media(max-width:700px){.page{padding:14px}.header,.top-fields,.bottom{grid-template-columns:1fr}.header-left{border-right:0;border-bottom:1px solid #222}.top-fields label{border-right:0;border-bottom:1px solid #222}.top-fields label:last-child{border-bottom:0}.top-fields .full{border-bottom:1px solid #222}.rating{font-size:11px}.rating th,.rating td{padding:8px 3px}.rating td:first-child,.rating th:first-child{width:36%}}
+@media print{body{background:#fff}.page{width:100%;margin:0;box-shadow:none}.actions,.message,.success{display:none}}
+</style>
+</head>
+<body>
+<main class="page">
+<header class="header">
+  <div class="header-left"><div class="logo">C</div><div><strong>GESTÃO DA QUALIDADE</strong><small>Cortez Móveis</small></div></div>
+  <div class="header-right"><strong>RELATÓRIO SATISFAÇÃO DO CLIENTE</strong><small>Código: FVEN003&nbsp;&nbsp;&nbsp; Revisão: 02&nbsp;&nbsp;&nbsp; Página: 1 de 1</small></div>
+</header>
+
+<section class="top-fields">
+  <label class="full">CLIENTE / EMPRESA<input id="cliente" required></label>
+  <label>REFERENTE PEDIDO Nº<input id="pedido" required></label>
+  <label>NF Nº<input id="nf" required></label>
+</section>
+
+<section class="intro">
+<p>A Cortez Móveis, agradece o privilégio de tê-lo como cliente e através desta pesquisa, indicaremos à nossa equipe e colaboradores o resultado indicado, que irá nos ajudar aperfeiçoar e até mesmo atualizar nossos procedimentos para melhor atende-lo.</p>
+<p>A confiança depositada em nossos produtos é o melhor reconhecimento que poderíamos receber, poderia responder essas perguntas e nos avaliar?</p>
+</section>
+
+<table class="rating">
+<thead><tr><th>QUESITO</th><th>MUITO SATISFEITO</th><th>SATISFEITO</th><th>INSATISFEITO</th></tr></thead>
+<tbody>
+<tr><td>Atendimento vendas</td><td><input type="radio" name="r1" value="Muito satisfeito"></td><td><input type="radio" name="r1" value="Satisfeito"></td><td><input type="radio" name="r1" value="Insatisfeito"></td></tr>
+<tr><td>Qualidade produto</td><td><input type="radio" name="r2" value="Muito satisfeito"></td><td><input type="radio" name="r2" value="Satisfeito"></td><td><input type="radio" name="r2" value="Insatisfeito"></td></tr>
+<tr><td>Entrega no prazo</td><td><input type="radio" name="r3" value="Muito satisfeito"></td><td><input type="radio" name="r3" value="Satisfeito"></td><td><input type="radio" name="r3" value="Insatisfeito"></td></tr>
+<tr><td>Atende as expectativas?</td><td><input type="radio" name="r4" value="Muito satisfeito"></td><td><input type="radio" name="r4" value="Satisfeito"></td><td><input type="radio" name="r4" value="Insatisfeito"></td></tr>
+</tbody>
+</table>
+
+<section class="comment"><div class="comment-title">Seu comentário também é muito importante para aprimorarmos nosso atendimento e qualidade dos produtos.</div><div>Deixe seu comentário (elogio, critica ou sugestão):</div><textarea id="comentario" rows="5"></textarea></section>
+
+<section class="bottom">
+<label class="field">Responsável por responder a pesquisa /<input id="responsavel" required></label>
+<label class="field">Cargo<input id="cargo" required></label>
+<label class="field">Data do preenchimento<input id="data" type="date" required></label>
+</section>
+
+<section class="signature-wrap">
+  <div class="sig-head"><strong>Assinatura</strong><button type="button" id="clear">Limpar assinatura</button></div>
+  <canvas id="signature"></canvas>
+  <div class="sig-caption">Assine acima usando mouse, touch ou caneta.</div>
+</section>
+
+<div id="message" class="message"></div>
+<div class="actions"><button class="secondary" type="button" id="save">Salvar preenchimento</button><button class="primary" type="button" id="finish">Finalizar e imprimir</button></div>
+<div id="success" class="success" hidden>Pesquisa finalizada. Use a impressão do navegador para salvar o relatório preenchido em PDF.</div>
+
+<footer class="footer"><span>FVEN003 RELATÓRIO DE SATISFAÇÃO DO CLIENTE_REV02</span><span>Cortez Móveis</span></footer>
+</main>
+
+<script>
+const c=document.getElementById('signature'),x=c.getContext('2d');let drawing=false,signed=false;
+function resize(){const old=signed?c.toDataURL('image/png'):null;const d=devicePixelRatio||1,r=c.getBoundingClientRect();c.width=r.width*d;c.height=r.height*d;x.setTransform(d,0,0,d,0,0);x.lineWidth=2;x.lineCap='round';x.lineJoin='round';x.strokeStyle='#173f5d';if(old){const i=new Image;i.onload=()=>x.drawImage(i,0,0,r.width,r.height);i.src=old}}
+function point(e){const r=c.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
+c.addEventListener('pointerdown',e=>{drawing=true;c.setPointerCapture(e.pointerId);const p=point(e);x.beginPath();x.moveTo(p.x,p.y)});
+c.addEventListener('pointermove',e=>{if(!drawing)return;const p=point(e);x.lineTo(p.x,p.y);x.stroke();signed=true});
+['pointerup','pointercancel','pointerleave'].forEach(v=>c.addEventListener(v,()=>drawing=false));
+document.getElementById('clear').onclick=()=>{x.clearRect(0,0,c.width,c.height);signed=false};
+document.getElementById('data').value=new Date().toISOString().slice(0,10);
+function data(){const o={};['cliente','pedido','nf','comentario','responsavel','cargo','data'].forEach(id=>o[id]=document.getElementById(id).value);['r1','r2','r3','r4'].forEach(n=>o[n]=document.querySelector('input[name="'+n+'"]:checked')?.value||'');o.signature=signed?c.toDataURL('image/png'):'';return o}
+document.getElementById('save').onclick=()=>{localStorage.setItem('cortez_relatorio_satisfacao',JSON.stringify(data()));document.getElementById('message').textContent='Preenchimento salvo neste navegador.'};
+document.getElementById('finish').onclick=()=>{const missing=['cliente','pedido','nf','responsavel','cargo','data'].some(id=>!document.getElementById(id).value);const ratings=['r1','r2','r3','r4'].some(n=>!document.querySelector('input[name="'+n+'"]:checked'));if(missing||ratings||!signed){document.getElementById('message').textContent='Preencha todos os dados, todos os quesitos e faça a assinatura antes de finalizar.';return}localStorage.setItem('cortez_relatorio_satisfacao_final',JSON.stringify({...data(),finalizadoEm:new Date().toISOString()}));document.getElementById('success').hidden=false;setTimeout(()=>window.print(),250)};
+window.addEventListener('resize',()=>resize());resize();
+const saved=localStorage.getItem('cortez_relatorio_satisfacao');if(saved)try{const o=JSON.parse(saved);Object.keys(o).forEach(k=>{if(k.startsWith('r')){const i=document.querySelector('input[name="'+k+'"][value="'+o[k]+'"]');if(i)i.checked=true}else if(k!=='signature'&&document.getElementById(k))document.getElementById(k).value=o[k]});if(o.signature){const i=new Image;i.onload=()=>{const r=c.getBoundingClientRect();x.drawImage(i,0,0,r.width,r.height);signed=true};i.src=o.signature}}catch{}
+</script>
+</body>
+</html>
