@@ -167,17 +167,87 @@ async function loadModel(){
     mRevision.value=data.revision||"02";
   }
 }
-async function loadReports(){const {data,error}=await supabase.from("reports").select("id,public_token,status,client_name,pedido,nf,atendimento,qualidade,entrega,expectativas,comentario,responsavel,cargo,data_preenchimento,assinatura_data_url,sent_at,received_at").order("created_at",{ascending:false});if(error){msg(document.getElementById("modelMessage"),error.message);return}reports=data||[];const out=reports.filter(r=>r.status==="saida"&&r.client_name&&r.pedido&&r.nf),inc=reports.filter(r=>r.status==="recebido");sTotalEl.textContent=out.length+inc.length;sPendingEl.textContent=out.length;sReceivedEl.textContent=inc.length;saidaBodyEl.innerHTML=out.length?out.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+date(r.sent_at)+'</td><td><span class="pill out">Enviado · aguardando cliente</span></td><td><div class="row-actions">
-  <button class="copy-btn copy-action" type="button" data-copy-token="'+r.public_token+'" data-client="'+esc(r.client_name)+'" data-order="'+esc(r.pedido)+'" data-nf="'+esc(r.nf)+'">
-    <span class="copy-icon" aria-hidden="true">↗</span><span>Copiar</span>
-  </button>
-  <button class="delete-btn" type="button" data-delete-id="'+r.id+'"><span aria-hidden="true">×</span><span>Excluir</span></button>
-</div></td></tr>').join(""):'<tr><td colspan="6">Nenhuma saída cadastrada.</td></tr>';recebidoBodyEl.innerHTML=inc.length?inc.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+esc(r.responsavel||"-")+'</td><td>'+date(r.received_at)+'</td><td><div class="row-actions"><span class="pill in">Recebido</span><button class="save-received-btn" type="button" data-save-id="'+r.id+'"><span aria-hidden="true">↓</span><span>Salvar</span></button><button class="delete-btn" type="button" data-delete-id="'+r.id+'"><span aria-hidden="true">×</span><span>Excluir</span></button></div></td></tr>').join(""):'<tr><td colspan="6">Nenhum relatório recebido.</td></tr>';document.querySelectorAll("[data-copy-token]").forEach(b=>b.onclick=async()=>{
-  const ok=await copy(makeUrl(b.dataset.copyToken,b.dataset.client,b.dataset.order,b.dataset.nf));
-  if(ok)showCopySuccess(b);
-});
-document.querySelectorAll("[data-delete-id]").forEach(b=>b.onclick=()=>openDeleteModal(b.dataset.deleteId));
-document.querySelectorAll("[data-save-id]").forEach(b=>b.onclick=()=>openSaveReceived(b.dataset.saveId));}
+async function loadReports(){
+  const {data,error}=await supabase
+    .from("reports")
+    .select("id,public_token,status,client_name,pedido,nf,atendimento,qualidade,entrega,expectativas,comentario,responsavel,cargo,data_preenchimento,assinatura_data_url,sent_at,received_at")
+    .order("created_at",{ascending:false});
+
+  if(error){
+    msg(document.getElementById("modelMessage"),error.message);
+    return;
+  }
+
+  reports=data||[];
+  const out=reports.filter(r=>r.status==="saida"&&r.client_name&&r.pedido&&r.nf);
+  const inc=reports.filter(r=>r.status==="recebido");
+
+  sTotalEl.textContent=out.length+inc.length;
+  sPendingEl.textContent=out.length;
+  sReceivedEl.textContent=inc.length;
+
+  saidaBodyEl.innerHTML=out.length
+    ? out.map(r=>`
+      <tr>
+        <td>${esc(r.client_name)}</td>
+        <td>${esc(r.pedido)}</td>
+        <td>${esc(r.nf)}</td>
+        <td>${date(r.sent_at)}</td>
+        <td><span class="pill out">Enviado · aguardando cliente</span></td>
+        <td>
+          <div class="row-actions">
+            <button class="copy-btn copy-action" type="button"
+              data-copy-token="${esc(r.public_token)}"
+              data-client="${esc(r.client_name)}"
+              data-order="${esc(r.pedido)}"
+              data-nf="${esc(r.nf)}">
+              <span class="copy-icon" aria-hidden="true">↗</span><span>Copiar</span>
+            </button>
+            <button class="delete-btn" type="button" data-delete-id="${esc(r.id)}">
+              <span aria-hidden="true">×</span><span>Excluir</span>
+            </button>
+          </div>
+        </td>
+      </tr>`).join("")
+    : '<tr><td colspan="6">Nenhuma saída cadastrada.</td></tr>';
+
+  recebidoBodyEl.innerHTML=inc.length
+    ? inc.map(r=>`
+      <tr>
+        <td>${esc(r.client_name)}</td>
+        <td>${esc(r.pedido)}</td>
+        <td>${esc(r.nf)}</td>
+        <td>${esc(r.responsavel||"-")}</td>
+        <td>${date(r.received_at)}</td>
+        <td>
+          <div class="row-actions">
+            <span class="pill in">Recebido</span>
+            <button class="save-received-btn" type="button" data-save-id="${esc(r.id)}">
+              <span aria-hidden="true">↓</span><span>Salvar</span>
+            </button>
+            <button class="delete-btn" type="button" data-delete-id="${esc(r.id)}">
+              <span aria-hidden="true">×</span><span>Excluir</span>
+            </button>
+          </div>
+        </td>
+      </tr>`).join("")
+    : '<tr><td colspan="6">Nenhum relatório recebido.</td></tr>';
+
+  document.querySelectorAll("[data-copy-token]").forEach(button=>{
+    button.onclick=async()=>{
+      const ok=await copy(makeUrl(button.dataset.copyToken,button.dataset.client,button.dataset.order,button.dataset.nf));
+      if(ok)showCopySuccess(button);
+    };
+  });
+
+  document.querySelectorAll("[data-delete-id]").forEach(button=>{
+    button.onclick=()=>openDeleteModal(button.dataset.deleteId);
+  });
+
+  document.querySelectorAll("[data-save-id]").forEach(button=>{
+    button.onclick=()=>openSaveReceived(button.dataset.saveId);
+  });
+}
 
 function date(v){return v?new Date(v).toLocaleString("pt-BR"): "-"}function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
 function getReportForExport(id){
