@@ -93,14 +93,32 @@ body{background:#fff}.app{width:100%;margin:0}.shell{border:0;box-shadow:none}.t
 .copy-action .copy-icon{width:15px;height:15px;display:grid;place-items:center;color:currentColor;transition:transform .22s ease}.copy-action .copy-icon svg{width:15px;height:15px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .copy-action.copied{background:#e9f7ef;border-color:#bfe1cd;color:var(--green);box-shadow:0 8px 20px rgba(47,127,95,.14);animation:copySuccess .35s ease}
 .copy-action.copied .copy-icon{transform:scale(1.12) rotate(-6deg)}.copy-action.copied{animation:copySuccess .35s ease}
-.delete-btn{border:1px solid #f0d2d2;background:#fff7f7;color:#a04b4b;border-radius:7px;padding:7px 8px;font-size:10px;font-weight:800;cursor:pointer}
-.delete-btn:hover{background:#fff0f0;border-color:#e9bcbc;transform:translateY(-1px)}
+.delete-btn{border:1px solid #ecd6d6;background:linear-gradient(180deg,#fffafa,#fff5f5);color:#9b4b4b;border-radius:9px;padding:8px 10px;font-size:10px;font-weight:850;cursor:pointer;box-shadow:0 4px 12px rgba(168,75,75,.05);transition:transform .2s ease,background .2s ease,border-color .2s ease,box-shadow .2s ease,color .2s ease}
+.delete-btn:hover{background:#fff0f0;border-color:#dfb2b2;color:#8d3f3f;transform:translateY(-1px);box-shadow:0 9px 20px rgba(168,75,75,.11)}.delete-btn:active{transform:translateY(0) scale(.98)}
 .delete-btn span:first-child{font-size:14px;line-height:10px}
 .btn.danger{background:#a84b4b;color:#fff;box-shadow:0 9px 22px rgba(168,75,75,.18)}
 .btn.danger:hover{background:#933d3d}
-.delete-modal .delete-card{transform:translateY(12px) scale(.96);opacity:0;transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .22s ease}
+.delete-modal{z-index:120;background:rgba(7,20,29,.58);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px)}
+.delete-modal .delete-card{position:relative;width:min(470px,100%);overflow:hidden;text-align:center;padding:32px 32px 22px;border:1px solid rgba(255,255,255,.9);border-radius:24px;background:linear-gradient(180deg,#fff 0%,#fbfcfd 100%);box-shadow:0 34px 100px rgba(5,20,29,.30);transform:translateY(14px) scale(.94);opacity:0;transition:transform .32s cubic-bezier(.2,.85,.2,1),opacity .22s ease}
 .delete-modal.show .delete-card{transform:none;opacity:1}
-.delete-modal-icon{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;margin-bottom:14px;background:#fff0f0;color:#a84b4b;border:1px solid #f0cccc;font-size:28px;font-weight:700;box-shadow:0 12px 28px rgba(168,75,75,.10)}
+.delete-card-glow{position:absolute;inset:-80px -60px auto;height:180px;background:radial-gradient(circle at 50% 0%,rgba(178,86,86,.13),transparent 65%);pointer-events:none}
+.delete-modal-icon{position:relative;width:64px;height:64px;border-radius:20px;display:grid;place-items:center;margin:0 auto 16px;background:linear-gradient(145deg,#fff5f5,#ffecec);color:#a44a4a;border:1px solid #efcaca;box-shadow:0 14px 30px rgba(168,75,75,.13)}
+.delete-modal-icon svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.delete-kicker{position:relative;font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:#a05b5b;font-weight:900;margin-bottom:7px}
+.delete-card h2{position:relative;font-size:22px;letter-spacing:-.025em;margin:0;color:var(--navy2)}
+.delete-card p{position:relative;max-width:365px;margin:8px auto 0;font-size:12px;line-height:1.65;color:var(--muted)}
+.delete-divider{height:1px;background:linear-gradient(90deg,transparent,#eadfe0,transparent);margin:21px 0 17px}
+.delete-actions{position:relative;display:grid;grid-template-columns:1fr 1.2fr;gap:10px;margin-top:0}
+.delete-actions .btn{min-height:44px;border-radius:12px;padding:11px 14px}
+.delete-cancel{border:1px solid #dfe6eb;background:#f7f9fa;color:#465b66;box-shadow:0 5px 15px rgba(18,43,58,.04)}
+.delete-cancel:hover{background:#fff;border-color:#ccd9df}
+.delete-confirm{display:flex;align-items:center;justify-content:center;gap:7px;background:linear-gradient(135deg,#a84b4b,#923f3f);box-shadow:0 12px 26px rgba(168,75,75,.20)}
+.delete-confirm:hover{background:linear-gradient(135deg,#9d4343,#893838)}
+.delete-confirm.is-processing{opacity:.72;pointer-events:none}
+.danger-button-icon{width:15px;height:15px;display:grid;place-items:center;font-size:16px;line-height:1}
+.delete-hint{position:relative;margin-top:13px;font-size:9px;color:#97a2a8;letter-spacing:.02em}
+.delete-hint span{display:inline-grid;place-items:center;min-width:18px;height:18px;margin-right:4px;border:1px solid #dce4e8;border-radius:5px;background:#f4f7f8;font-weight:850;color:#718089}
+@media(max-width:520px){.delete-modal .delete-card{padding:28px 20px 19px}.delete-actions{grid-template-columns:1fr}.delete-card h2{font-size:20px}}
 @keyframes copySuccess{0%{transform:scale(.94)}60%{transform:scale(1.04)}100%{transform:scale(1)}}
 @media(max-width:760px){.row-actions{align-items:stretch}.row-actions .copy-btn,.row-actions .delete-btn{width:100%;justify-content:center}}
 
