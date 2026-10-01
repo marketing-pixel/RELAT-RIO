@@ -83,7 +83,8 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
-const token=new URLSearchParams(location.search).get("token");
+const params=new URLSearchParams(location.search);
+const token=(params.get("token")||params.get("p_token")||"").trim();
 let signed=false,drawing=false;
 const canvas=document.getElementById("signature"),ctx=canvas.getContext("2d");
 function resizeCanvas(keep=true){
@@ -112,7 +113,17 @@ async function loadReport(){
   if(!token){document.getElementById("loading").className="notice";document.getElementById("invalid").className="notice show error";return}
   const {data,error}=await supabase.rpc("get_report_public",{p_token:token});
   document.getElementById("loading").className="notice";
-  if(error||!data){document.getElementById("invalid").className="notice show error";return}
+  if(error){
+    console.error("Falha ao validar link público:",error);
+    document.getElementById("invalid").textContent="Não foi possível validar este link agora. Gere um novo link pelo Controle de Relatórios.";
+    document.getElementById("invalid").className="notice show error";
+    return;
+  }
+  if(!data){
+    document.getElementById("invalid").textContent="Este link não é válido ou já não está disponível. Solicite à Cortez Móveis um novo link de preenchimento.";
+    document.getElementById("invalid").className="notice show error";
+    return;
+  }
   document.getElementById("formArea").hidden=false;
   ["client_name","pedido","nf"].forEach(id=>setVal(id,data[id]));
   setVal("data_preenchimento",data.data_preenchimento||new Date().toISOString().slice(0,10));
