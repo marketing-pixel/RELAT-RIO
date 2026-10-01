@@ -160,7 +160,7 @@ loginForm?.addEventListener("submit",async e=>{
 
 async function init(){
   if(token){
-    const publicUrl=new URL("./formulario.html",window.location.href);
+    const publicUrl=new URL("./cliente.html",window.location.href);
     publicUrl.search=new URLSearchParams({token:token.trim()}).toString();
     publicUrl.hash="";
     window.location.replace(publicUrl.href);
