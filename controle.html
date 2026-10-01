@@ -139,8 +139,10 @@ async function loadModel(){
 async function loadReports(){const {data,error}=await supabase.from("reports").select("id,public_token,status,client_name,pedido,nf,responsavel,sent_at,received_at").order("created_at",{ascending:false});if(error){msg(document.getElementById("modelMessage"),error.message);return}reports=data||[];const out=reports.filter(r=>r.status==="saida"&&r.client_name&&r.pedido&&r.nf),inc=reports.filter(r=>r.status==="recebido");sTotalEl.textContent=out.length+inc.length;sPendingEl.textContent=out.length;sReceivedEl.textContent=inc.length;saidaBodyEl.innerHTML=out.length?out.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+date(r.sent_at)+'</td><td><span class="pill out">Enviado · aguardando cliente</span></td><td><button class="copy-btn" data-token="'+r.public_token+'">Copiar</button></td></tr>').join(""):'<tr><td colspan="6">Nenhuma saída cadastrada.</td></tr>';recebidoBodyEl.innerHTML=inc.length?inc.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+esc(r.responsavel||"-")+'</td><td>'+date(r.received_at)+'</td><td><span class="pill in">Recebido</span></td></tr>').join(""):'<tr><td colspan="6">Nenhum relatório recebido.</td></tr>';document.querySelectorAll("[data-token]").forEach(b=>b.onclick=()=>copy(makeUrl(b.dataset.token)))}
 function date(v){return v?new Date(v).toLocaleString("pt-BR"): "-"}function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
 function makeUrl(token){
-  const u=new URL("./formulario.html",window.location.href);
-  u.search=new URLSearchParams({token}).toString();
+  const u=new URL(window.location.href);
+  u.pathname=u.pathname.replace(/\/controle\.html$/i,"/formulario.html");
+  u.search=new URLSearchParams({token:String(token||"").trim()}).toString();
+  u.hash="";
   return u.href;
 }
 async function copy(t){
@@ -200,8 +202,10 @@ document.getElementById("finalize").onclick=async()=>{
     return;
   }
 
-  const clientUrl=new URL("./formulario.html",window.location.href);
-  clientUrl.search=new URLSearchParams({token:r.public_token}).toString();
+  const clientUrl=new URL(window.location.href);
+  clientUrl.pathname=clientUrl.pathname.replace(/\/controle\.html$/i,"/formulario.html");
+  clientUrl.search=new URLSearchParams({token:String(r.public_token||"").trim()}).toString();
+  clientUrl.hash="";
   const copied=await copy(clientUrl.href);
   document.getElementById("generatedUrl").textContent=clientUrl.href;
   document.getElementById("copyStatus").textContent=copied?"Link copiado automaticamente.":"Link gerado. Use o botão abaixo para copiar.";
