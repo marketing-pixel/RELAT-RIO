@@ -136,7 +136,16 @@ async function loadModel(){
     mRevision.value=data.revision||"02";
   }
 }
-async function loadReports(){const {data,error}=await supabase.from("reports").select("id,public_token,status,client_name,pedido,nf,responsavel,sent_at,received_at").order("created_at",{ascending:false});if(error){msg(document.getElementById("modelMessage"),error.message);return}reports=data||[];const out=reports.filter(r=>r.status==="saida"&&r.client_name&&r.pedido&&r.nf),inc=reports.filter(r=>r.status==="recebido");sTotalEl.textContent=out.length+inc.length;sPendingEl.textContent=out.length;sReceivedEl.textContent=inc.length;saidaBodyEl.innerHTML=out.length?out.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+date(r.sent_at)+'</td><td><span class="pill out">Enviado · aguardando cliente</span></td><td><button class="copy-btn" data-token="'+r.public_token+'" data-client="'+esc(r.client_name)+'" data-order="'+esc(r.pedido)+'" data-nf="'+esc(r.nf)+'">Copiar</button></td></tr>').join(""):'<tr><td colspan="6">Nenhuma saída cadastrada.</td></tr>';recebidoBodyEl.innerHTML=inc.length?inc.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+esc(r.responsavel||"-")+'</td><td>'+date(r.received_at)+'</td><td><span class="pill in">Recebido</span></td></tr>').join(""):'<tr><td colspan="6">Nenhum relatório recebido.</td></tr>';document.querySelectorAll("[data-token]").forEach(b=>b.onclick=()=>copy(makeUrl(b.dataset.token,b.dataset.client,b.dataset.order,b.dataset.nf)))}
+async function loadReports(){const {data,error}=await supabase.from("reports").select("id,public_token,status,client_name,pedido,nf,responsavel,sent_at,received_at").order("created_at",{ascending:false});if(error){msg(document.getElementById("modelMessage"),error.message);return}reports=data||[];const out=reports.filter(r=>r.status==="saida"&&r.client_name&&r.pedido&&r.nf),inc=reports.filter(r=>r.status==="recebido");sTotalEl.textContent=out.length+inc.length;sPendingEl.textContent=out.length;sReceivedEl.textContent=inc.length;saidaBodyEl.innerHTML=out.length?out.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+date(r.sent_at)+'</td><td><span class="pill out">Enviado · aguardando cliente</span></td><td><div class="row-actions">
+  <button class="copy-btn copy-action" type="button" data-copy-token="'+r.public_token+'" data-client="'+esc(r.client_name)+'" data-order="'+esc(r.pedido)+'" data-nf="'+esc(r.nf)'>
+    <span class="copy-icon" aria-hidden="true">↗</span><span>Copiar</span>
+  </button>
+  <button class="delete-btn" type="button" data-delete-id="'+r.id+'"><span aria-hidden="true">×</span><span>Excluir</span></button>
+</div></td></tr>').join(""):'<tr><td colspan="6">Nenhuma saída cadastrada.</td></tr>';recebidoBodyEl.innerHTML=inc.length?inc.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+esc(r.responsavel||"-")+'</td><td>'+date(r.received_at)+'</td><td><div class="row-actions"><span class="pill in">Recebido</span><button class="delete-btn" type="button" data-delete-id="'+r.id+'"><span aria-hidden="true">×</span><span>Excluir</span></button></div></td></tr>').join(""):'<tr><td colspan="6">Nenhum relatório recebido.</td></tr>';document.querySelectorAll("[data-copy-token]").forEach(b=>b.onclick=async()=>{
+  const ok=await copy(makeUrl(b.dataset.copyToken,b.dataset.client,b.dataset.order,b.dataset.nf));
+  if(ok)showCopySuccess(b);
+})}
+
 function date(v){return v?new Date(v).toLocaleString("pt-BR"): "-"}function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
 function makeUrl(token,client="",order="",nf=""){
   const u=new URL(window.location.href);
@@ -156,6 +165,31 @@ async function copy(t){
     try{const ta=document.createElement("textarea");ta.value=t;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();const ok=document.execCommand("copy");ta.remove();return ok}
     catch{return false}
   }
+}
+function showCopySuccess(button){
+  const label=button.querySelector("span:last-child");
+  const icon=button.querySelector(".copy-icon");
+  button.classList.add("copied");
+  if(label)label.textContent="Copiado";
+  if(icon)icon.textContent="✓";
+  clearTimeout(button._copyTimer);
+  button._copyTimer=setTimeout(()=>{
+    button.classList.remove("copied");
+    if(label)label.textContent="Copiar";
+    if(icon)icon.textContent="↗";
+  },1700);
+}
+function openDeleteModal(id){
+  const modal=document.getElementById("deleteModal");
+  modal.dataset.id=id;
+  modal.classList.add("show");
+}
+async function deleteReport(id){
+  const {error}=await supabase.from("reports").delete().eq("id",id);
+  if(error){msg(modelMessageEl,error.message);return false}
+  await loadReports();
+  msg(modelMessageEl,"Relatório excluído com sucesso.",false);
+  return true;
 }
 document.getElementById("saveModel").onclick=async()=>{const {data,error}=await supabase.from("report_templates").update({internal_client:mClient.value.trim(),internal_order:mOrder.value.trim(),internal_invoice:mNf.value.trim(),code:mCode.value.trim(),revision:mRevision.value.trim(),updated_at:new Date().toISOString()}).not("id","is",null).select().maybeSingle();if(error)msg(modelMessageEl,error.message);else msg(modelMessageEl,"Modelo salvo com sucesso.",false)};
 document.getElementById("finalize").onclick=async()=>{
@@ -227,6 +261,33 @@ document.getElementById("finalize").onclick=async()=>{
 };
 document.getElementById("closeModal").onclick=()=>document.getElementById("modal").classList.remove("show");document.getElementById("copyLink").onclick=()=>copy(document.getElementById("generatedUrl").textContent);
 async function loadAll(){await loadModel();await loadReports()}
+document.getElementById("cancelDelete").onclick=()=>document.getElementById("deleteModal").classList.remove("show");
+document.getElementById("confirmDelete").onclick=async()=>{
+  const modal=document.getElementById("deleteModal");
+  const id=modal.dataset.id;
+  if(!id)return;
+  const btn=document.getElementById("confirmDelete");
+  btn.disabled=true;
+  btn.textContent="Excluindo…";
+  const ok=await deleteReport(id);
+  btn.disabled=false;
+  btn.textContent="Excluir relatório";
+  if(ok)modal.classList.remove("show");
+};
+document.querySelectorAll("[data-delete-id]").forEach(b=>b.onclick=()=>openDeleteModal(b.dataset.deleteId));
 session();
 </script>
+
+<div id="deleteModal" class="modal delete-modal">
+  <div class="modal-card delete-card">
+    <div class="delete-modal-icon">×</div>
+    <div class="modal-kicker">Excluir relatório</div>
+    <h2>Tem certeza que deseja excluir?</h2>
+    <p>O registro será removido do Controle de Relatórios. Essa ação não pode ser desfeita.</p>
+    <div class="modal-actions">
+      <button class="btn light" id="cancelDelete" type="button">Cancelar</button>
+      <button class="btn danger" id="confirmDelete" type="button">Excluir relatório</button>
+    </div>
+  </div>
+</div>
 </body></html>
