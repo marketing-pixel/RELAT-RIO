@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pt-BR">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Controle de Relatórios | Cortez Móveis</title><link rel="stylesheet" href="styles.css"><script src="https://cdn.jsdelivr.net/npm/jspdf@3.0.3/dist/jspdf.umd.min.js"></script></head>
+<title>Controle de Relatórios | Cortez Móveis</title><link rel="stylesheet" href="styles.css"><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="https://cdn.jsdelivr.net/npm/jspdf@3.0.3/dist/jspdf.umd.min.js"></script></head>
 <body>
 <main class="app" id="app">
 <header class="topbar">
@@ -86,10 +86,10 @@
   </div>
 </div>
 
-<script type="module">
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
-import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
-const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
+<script>
+const SUPABASE_URL="https://kvxmnbkfscpqnbftqjeu.supabase.co";
+const SUPABASE_KEY="sb_publishable_Mx-i_T4xREFQuinN-aq3lA_f3jMTFc5";
+const supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 let reports=[];
 const login=document.getElementById("login"),control=document.getElementById("control");
 const mClient=document.getElementById("m_client"),mOrder=document.getElementById("m_order"),mNf=document.getElementById("m_nf"),mCode=document.getElementById("m_code"),mRevision=document.getElementById("m_revision");
@@ -131,13 +131,28 @@ document.getElementById("loginForm").onsubmit=async e=>{
   e.preventDefault();
   const email=document.getElementById("email").value.trim().toLowerCase();
   const password=document.getElementById("password").value;
-  const {error}=await supabase.auth.signInWithPassword({email,password});
-  if(!error){
+  const button=e.submitter||document.querySelector('#loginForm button[type="submit"]');
+  if(button){button.disabled=true;button.textContent="Entrando…";}
+  const loginMessage=document.getElementById("loginMessage");
+  loginMessage.className="notice";
+  try{
+    const {data,error}=await supabase.auth.signInWithPassword({email,password});
+    if(error){
+      msg(loginMessage,error.message||"Não foi possível entrar.");
+      return;
+    }
+    if(!data?.session){
+      msg(loginMessage,"A autenticação foi concluída, mas nenhuma sessão foi criada.");
+      return;
+    }
     sessionStorage.setItem("cortez_internal_login","1");
-    session();
-    return;
+    msg(loginMessage,"Acesso autorizado. Abrindo o controle…",false);
+    await session();
+  }catch(error){
+    msg(loginMessage,error?.message||"Falha de comunicação com o servidor de autenticação.");
+  }finally{
+    if(button){button.disabled=false;button.textContent="Entrar no controle";}
   }
-  msg(document.getElementById("loginMessage"),"E-mail ou senha inválidos.");
 };
 document.getElementById("logout").onclick=async()=>{sessionStorage.removeItem("cortez_internal_login");sessionStorage.removeItem("cortez_auth_session");await supabase.auth.signOut();location.reload()};
 document.querySelectorAll(".workflow-nav .flow-node").forEach(b=>b.onclick=()=>{document.querySelectorAll(".workflow-nav .flow-node").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active");});
