@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pt-BR">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Controle de Relatórios | Cortez Móveis</title><link rel="stylesheet" href="styles.css"></head>
+<title>Controle de Relatórios | Cortez Móveis</title><link rel="stylesheet" href="styles.css"><script src="https://cdn.jsdelivr.net/npm/jspdf@3.0.3/dist/jspdf.umd.min.js"></script></head>
 <body>
 <main class="app" id="app">
 <header class="topbar">
@@ -89,6 +89,7 @@
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, ImageRun } from "https://esm.sh/docx@9.8.1";
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
 let reports=[];
 const login=document.getElementById("login"),control=document.getElementById("control");
@@ -141,13 +142,154 @@ async function loadReports(){const {data,error}=await supabase.from("reports").s
     <span class="copy-icon" aria-hidden="true">↗</span><span>Copiar</span>
   </button>
   <button class="delete-btn" type="button" data-delete-id="'+r.id+'"><span aria-hidden="true">×</span><span>Excluir</span></button>
-</div></td></tr>').join(""):'<tr><td colspan="6">Nenhuma saída cadastrada.</td></tr>';recebidoBodyEl.innerHTML=inc.length?inc.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+esc(r.responsavel||"-")+'</td><td>'+date(r.received_at)+'</td><td><div class="row-actions"><span class="pill in">Recebido</span><button class="delete-btn" type="button" data-delete-id="'+r.id+'"><span aria-hidden="true">×</span><span>Excluir</span></button></div></td></tr>').join(""):'<tr><td colspan="6">Nenhum relatório recebido.</td></tr>';document.querySelectorAll("[data-copy-token]").forEach(b=>b.onclick=async()=>{
+</div></td></tr>').join(""):'<tr><td colspan="6">Nenhuma saída cadastrada.</td></tr>';recebidoBodyEl.innerHTML=inc.length?inc.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+esc(r.responsavel||"-")+'</td><td>'+date(r.received_at)+'</td><td><div class="row-actions"><span class="pill in">Recebido</span><button class="save-received-btn" type="button" data-save-id="'+r.id+'"><span aria-hidden="true">↓</span><span>Salvar</span></button><button class="delete-btn" type="button" data-delete-id="'+r.id+'"><span aria-hidden="true">×</span><span>Excluir</span></button></div></td></tr>').join(""):'<tr><td colspan="6">Nenhum relatório recebido.</td></tr>';document.querySelectorAll("[data-copy-token]").forEach(b=>b.onclick=async()=>{
   const ok=await copy(makeUrl(b.dataset.copyToken,b.dataset.client,b.dataset.order,b.dataset.nf));
   if(ok)showCopySuccess(b);
 });
-document.querySelectorAll("[data-delete-id]").forEach(b=>b.onclick=()=>openDeleteModal(b.dataset.deleteId));}
+document.querySelectorAll("[data-delete-id]").forEach(b=>b.onclick=()=>openDeleteModal(b.dataset.deleteId));
+document.querySelectorAll("[data-save-id]").forEach(b=>b.onclick=()=>openSaveReceived(b.dataset.saveId));}
 
 function date(v){return v?new Date(v).toLocaleString("pt-BR"): "-"}function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
+function getReportForExport(id){
+  return reports.find(r=>r.id===id)||null;
+}
+function openSaveReceived(id){
+  const modal=document.getElementById("saveReceivedModal");
+  modal.dataset.id=id;
+  modal.classList.add("show");
+}
+function safeFileName(value){
+  return String(value||"").replace(/[\\/:*?"<>|]+/g,"_").replace(/\s+/g," ").trim();
+}
+async function saveReceivedPdf(report){
+  if(!window.jspdf?.jsPDF)throw new Error("Gerador de PDF não carregou.");
+  const JsPDF=window.jspdf.jsPDF;
+  const pdf=new JsPDF({orientation:"portrait",unit:"mm",format:"a4",compress:true});
+  const pageW=210, margin=15, w=pageW-(margin*2);
+  let y=18;
+
+  const title=(text,size=14)=>{
+    pdf.setFont("helvetica","bold");
+    pdf.setFontSize(size);
+    pdf.setTextColor(21,60,87);
+    const lines=pdf.splitTextToSize(String(text||""),w);
+    if(y+lines.length*(size*.45)>282){pdf.addPage();y=18}
+    pdf.text(lines,margin,y);
+    y+=lines.length*(size*.45)+3;
+  };
+  const textLine=(label,value,bold=false)=>{
+    pdf.setFont("helvetica",bold?"bold":"normal");
+    pdf.setFontSize(9.5);
+    pdf.setTextColor(45,57,66);
+    const lines=pdf.splitTextToSize(label+": "+String(value||"—"),w);
+    if(y+lines.length*4.4>282){pdf.addPage();y=18}
+    pdf.text(lines,margin,y);
+    y+=lines.length*4.4+1.5;
+  };
+
+  title("Pesquisa de satisfação",19);
+  textLine("Cortez Móveis","Relatório de satisfação do cliente",true);
+
+  title("Dados do relatório",12);
+  textLine("Cliente / Empresa",report.client_name,true);
+  textLine("Referente ao pedido nº",report.pedido,true);
+  textLine("NF nº",report.nf,true);
+
+  title("Avaliação",12);
+  textLine("Atendimento vendas",report.atendimento);
+  textLine("Qualidade produto",report.qualidade);
+  textLine("Entrega no prazo",report.entrega);
+  textLine("Atende as expectativas",report.expectativas);
+
+  title("Comentário",12);
+  textLine("Comentário",report.comentario||"Sem comentário.");
+
+  title("Responsável e assinatura",12);
+  textLine("Responsável",report.responsavel,true);
+  textLine("Cargo",report.cargo);
+  textLine("Data do preenchimento",report.data_preenchimento);
+
+  if(report.assinatura_data_url){
+    if(y+48>282){pdf.addPage();y=18}
+    pdf.setFont("helvetica","bold");pdf.setFontSize(9.5);pdf.setTextColor(45,57,66);
+    pdf.text("Assinatura",margin,y);y+=3;
+    pdf.addImage(report.assinatura_data_url,"PNG",margin,y,w,42,undefined,"FAST");
+    y+=47;
+  }
+
+  pdf.setDrawColor(220,228,233);
+  pdf.line(margin,283,pageW-margin,283);
+  pdf.setFont("helvetica","normal");pdf.setFontSize(7.5);pdf.setTextColor(120,132,140);
+  pdf.text("Cortez Móveis · Controle de Relatórios",margin,289);
+
+  pdf.save("Relatorio - "+safeFileName(report.client_name||"Cliente")+" - Pedido "+safeFileName(report.pedido||"Sem pedido")+".pdf");
+}
+async function saveReceivedWord(report){
+  const dataUrl=report.assinatura_data_url||"";
+  const children=[
+    new Paragraph({text:"PESQUISA DE SATISFAÇÃO",heading:HeadingLevel.TITLE,alignment:AlignmentType.CENTER}),
+    new Paragraph({text:"Cortez Móveis · Relatório de satisfação do cliente",alignment:AlignmentType.CENTER}),
+    new Paragraph({text:"Dados do relatório",heading:HeadingLevel.HEADING_1}),
+    new Paragraph({children:[new TextRun({text:"Cliente / Empresa: ",bold:true}),new TextRun(report.client_name||"—")]}),
+    new Paragraph({children:[new TextRun({text:"Referente ao pedido nº: ",bold:true}),new TextRun(report.pedido||"—")]}),
+    new Paragraph({children:[new TextRun({text:"NF nº: ",bold:true}),new TextRun(report.nf||"—")]}),
+    new Paragraph({text:"Avaliação",heading:HeadingLevel.HEADING_1})
+  ];
+
+  const rows=[
+    ["Atendimento vendas",report.atendimento],
+    ["Qualidade produto",report.qualidade],
+    ["Entrega no prazo",report.entrega],
+    ["Atende as expectativas?",report.expectativas]
+  ].map(([q,a])=>new TableRow({children:[
+    new TableCell({children:[new Paragraph(q)]}),
+    new TableCell({children:[new Paragraph(a||"—")]})
+  ]}));
+
+  children.push(new Table({
+    width:{size:100,type:WidthType.PERCENTAGE},
+    rows:[
+      new TableRow({children:[new TableCell({children:[new Paragraph("Quesito")]}),new TableCell({children:[new Paragraph("Resposta")]})]}),
+      ...rows
+    ]
+  }));
+
+  children.push(
+    new Paragraph({text:"Comentário",heading:HeadingLevel.HEADING_1}),
+    new Paragraph(report.comentario||"Sem comentário."),
+    new Paragraph({text:"Responsável e assinatura",heading:HeadingLevel.HEADING_1}),
+    new Paragraph({children:[new TextRun({text:"Responsável: ",bold:true}),new TextRun(report.responsavel||"—")]}),
+    new Paragraph({children:[new TextRun({text:"Cargo: ",bold:true}),new TextRun(report.cargo||"—")]}),
+    new Paragraph({children:[new TextRun({text:"Data: ",bold:true}),new TextRun(report.data_preenchimento||"—")]})
+  );
+
+  if(dataUrl.startsWith("data:image/")){
+    try{
+      const base64=dataUrl.split(",")[1];
+      const bytes=Uint8Array.from(atob(base64),c=>c.charCodeAt(0));
+      children.push(
+        new Paragraph({text:"Assinatura",heading:HeadingLevel.HEADING_2}),
+        new Paragraph({children:[new ImageRun({data:bytes,transformation:{width:420,height:130}})]})
+      );
+    }catch{}
+  }
+
+  const doc=new Document({
+    sections:[{
+      properties:{page:{margin:{top:720,right:720,bottom:720,left:720}}},
+      children
+    }]
+  });
+  const blob=await Packer.toBlob(doc);
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="Relatorio - "+safeFileName(report.client_name||"Cliente")+" - Pedido "+safeFileName(report.pedido||"Sem pedido")+".docx";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+}
+
 function makeUrl(token,client="",order="",nf=""){
   const u=new URL(window.location.href);
   u.pathname=u.pathname.replace(/\/controle\.html$/i,"/responder.html");
@@ -275,6 +417,39 @@ document.getElementById("closeModal").onclick=()=>document.getElementById("modal
   }
 };
 async function loadAll(){await loadModel();await loadReports()}
+document.getElementById("cancelSaveReceived").onclick=()=>document.getElementById("saveReceivedModal").classList.remove("show");
+document.getElementById("saveReceivedPdf").onclick=async()=>{
+  const modal=document.getElementById("saveReceivedModal");
+  const report=getReportForExport(modal.dataset.id);
+  if(!report)return;
+  try{
+    const btn=document.getElementById("saveReceivedPdf");
+    btn.disabled=true;btn.querySelector("small").textContent="Gerando PDF…";
+    await saveReceivedPdf(report);
+    modal.classList.remove("show");
+  }catch(error){
+    msg(modelMessageEl,error.message||"Não foi possível gerar o PDF.",true);
+  }finally{
+    const btn=document.getElementById("saveReceivedPdf");
+    btn.disabled=false;btn.querySelector("small").textContent="Documento para compartilhar e imprimir";
+  }
+};
+document.getElementById("saveReceivedWord").onclick=async()=>{
+  const modal=document.getElementById("saveReceivedModal");
+  const report=getReportForExport(modal.dataset.id);
+  if(!report)return;
+  try{
+    const btn=document.getElementById("saveReceivedWord");
+    btn.disabled=true;btn.querySelector("small").textContent="Gerando Word…";
+    await saveReceivedWord(report);
+    modal.classList.remove("show");
+  }catch(error){
+    msg(modelMessageEl,error.message||"Não foi possível gerar o Word.",true);
+  }finally{
+    const btn=document.getElementById("saveReceivedWord");
+    btn.disabled=false;btn.querySelector("small").textContent="Arquivo editável no Microsoft Word";
+  }
+};
 document.getElementById("cancelDelete").onclick=()=>document.getElementById("deleteModal").classList.remove("show");document.getElementById("confirmDelete").onclick=async()=>{
   const modal=document.getElementById("deleteModal");
   const id=modal.dataset.id;
@@ -290,6 +465,19 @@ document.getElementById("cancelDelete").onclick=()=>document.getElementById("del
 session();
 </script>
 
+<div id="saveReceivedModal" class="modal">
+  <div class="modal-card save-received-card">
+    <div class="save-received-icon">↓</div>
+    <div class="modal-kicker">Exportar relatório</div>
+    <h2>Como deseja salvar?</h2>
+    <p>Escolha o formato para este relatório recebido.</p>
+    <div class="save-format-grid">
+      <button class="save-format" id="saveReceivedPdf" type="button"><span class="format-icon">PDF</span><span><strong>PDF</strong><small>Documento para compartilhar e imprimir</small></span></button>
+      <button class="save-format" id="saveReceivedWord" type="button"><span class="format-icon word">DOCX</span><span><strong>Word</strong><small>Arquivo editável no Microsoft Word</small></span></button>
+    </div>
+    <button class="btn light save-format-cancel" id="cancelSaveReceived" type="button">Cancelar</button>
+  </div>
+</div>
 <div id="deleteModal" class="modal delete-modal">
   <div class="modal-card delete-card">
     <div class="delete-modal-icon">×</div>
