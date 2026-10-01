@@ -400,8 +400,8 @@ function fillReportSnapshot(app,report){
             const selected=selectedByName[name]===option;
             return '<div class="choice export-choice">'+
               (selected
-                ? '<span class="export-check" aria-hidden="true">✓</span>'
-                : '<span class="export-empty" aria-hidden="true"></span>')+
+                ? '<span class="export-check" aria-hidden="true" style="display:grid;place-items:center;width:15px;height:15px;border-radius:50%;background:#153c57;color:#fff;font:700 10px/15px Arial,sans-serif;">✓</span>'
+                : '<span class="export-empty" aria-hidden="true" style="display:block;width:15px;height:15px;border-radius:50%;border:1.5px solid #b8c6ce;background:#fff;"></span>')+
             '</div>';
           }).join("")+
         '</div>';
