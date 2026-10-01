@@ -164,7 +164,7 @@ document.getElementById("printReport").onclick=()=>window.print();
 document.getElementById("saveAs").onclick=async()=>{
   const clientName=document.getElementById("client_name").value.trim()||"cliente";
   const orderName=document.getElementById("pedido").value.trim()||"relatorio";
-  const safeName=(value)=>value.replace(/[\\/:*?"<>|]+/g,"_").replace(/\\s+/g," ").trim();
+  const safeName=(value)=>value.replace(/[\\/:*?"<>|]+/g,"_").replace(/\s+/g," ").trim();
   const fileName="Relatorio - "+safeName(clientName)+" - Pedido "+safeName(orderName)+".html";
 
   const snapshot=document.documentElement.cloneNode(true);
@@ -213,7 +213,7 @@ document.getElementById("saveAs").onclick=async()=>{
     snapshot.querySelector("head")?.appendChild(style);
   }catch{}
 
-  const html="<!doctype html>\\n"+snapshot.outerHTML;
+  const html="<!doctype html>\n"+snapshot.outerHTML;
   const blob=new Blob([html],{type:"text/html;charset=utf-8"});
 
   if("showSaveFilePicker" in window){
