@@ -137,14 +137,15 @@ async function loadModel(){
   }
 }
 async function loadReports(){const {data,error}=await supabase.from("reports").select("id,public_token,status,client_name,pedido,nf,responsavel,sent_at,received_at").order("created_at",{ascending:false});if(error){msg(document.getElementById("modelMessage"),error.message);return}reports=data||[];const out=reports.filter(r=>r.status==="saida"&&r.client_name&&r.pedido&&r.nf),inc=reports.filter(r=>r.status==="recebido");sTotalEl.textContent=out.length+inc.length;sPendingEl.textContent=out.length;sReceivedEl.textContent=inc.length;saidaBodyEl.innerHTML=out.length?out.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+date(r.sent_at)+'</td><td><span class="pill out">Enviado · aguardando cliente</span></td><td><div class="row-actions">
-  <button class="copy-btn copy-action" type="button" data-copy-token="'+r.public_token+'" data-client="'+esc(r.client_name)+'" data-order="'+esc(r.pedido)+'" data-nf="'+esc(r.nf)'>
+  <button class="copy-btn copy-action" type="button" data-copy-token="'+r.public_token+'" data-client="'+esc(r.client_name)+'" data-order="'+esc(r.pedido)+'" data-nf="'+esc(r.nf)+'">
     <span class="copy-icon" aria-hidden="true">↗</span><span>Copiar</span>
   </button>
   <button class="delete-btn" type="button" data-delete-id="'+r.id+'"><span aria-hidden="true">×</span><span>Excluir</span></button>
 </div></td></tr>').join(""):'<tr><td colspan="6">Nenhuma saída cadastrada.</td></tr>';recebidoBodyEl.innerHTML=inc.length?inc.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+esc(r.responsavel||"-")+'</td><td>'+date(r.received_at)+'</td><td><div class="row-actions"><span class="pill in">Recebido</span><button class="delete-btn" type="button" data-delete-id="'+r.id+'"><span aria-hidden="true">×</span><span>Excluir</span></button></div></td></tr>').join(""):'<tr><td colspan="6">Nenhum relatório recebido.</td></tr>';document.querySelectorAll("[data-copy-token]").forEach(b=>b.onclick=async()=>{
   const ok=await copy(makeUrl(b.dataset.copyToken,b.dataset.client,b.dataset.order,b.dataset.nf));
   if(ok)showCopySuccess(b);
-})}
+});
+document.querySelectorAll("[data-delete-id]").forEach(b=>b.onclick=()=>openDeleteModal(b.dataset.deleteId));}
 
 function date(v){return v?new Date(v).toLocaleString("pt-BR"): "-"}function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
 function makeUrl(token,client="",order="",nf=""){
@@ -259,10 +260,22 @@ document.getElementById("finalize").onclick=async()=>{
   msg(modelMessageEl,"Saída criada e link copiado com sucesso.",false);
 
 };
-document.getElementById("closeModal").onclick=()=>document.getElementById("modal").classList.remove("show");document.getElementById("copyLink").onclick=()=>copy(document.getElementById("generatedUrl").textContent);
+document.getElementById("closeModal").onclick=()=>document.getElementById("modal").classList.remove("show");document.getElementById("copyLink").onclick=async()=>{
+  const button=document.getElementById("copyLink");
+  const ok=await copy(document.getElementById("generatedUrl").textContent);
+  if(ok){
+    button.classList.add("copied");
+    const old=button.textContent;
+    button.textContent="✓ Link copiado";
+    clearTimeout(button._copyTimer);
+    button._copyTimer=setTimeout(()=>{
+      button.classList.remove("copied");
+      button.textContent=old;
+    },1800);
+  }
+};
 async function loadAll(){await loadModel();await loadReports()}
-document.getElementById("cancelDelete").onclick=()=>document.getElementById("deleteModal").classList.remove("show");
-document.getElementById("confirmDelete").onclick=async()=>{
+document.getElementById("cancelDelete").onclick=()=>document.getElementById("deleteModal").classList.remove("show");document.getElementById("confirmDelete").onclick=async()=>{
   const modal=document.getElementById("deleteModal");
   const id=modal.dataset.id;
   if(!id)return;
@@ -274,7 +287,6 @@ document.getElementById("confirmDelete").onclick=async()=>{
   btn.textContent="Excluir relatório";
   if(ok)modal.classList.remove("show");
 };
-document.querySelectorAll("[data-delete-id]").forEach(b=>b.onclick=()=>openDeleteModal(b.dataset.deleteId));
 session();
 </script>
 
