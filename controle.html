@@ -82,8 +82,8 @@ import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
 let reports=[];
 const login=document.getElementById("login"),control=document.getElementById("control");
-const mClient=document.getElementById("mClient"),mOrder=document.getElementById("mOrder"),mNf=document.getElementById("mNf"),mCode=document.getElementById("mCode"),mRevision=document.getElementById("mRevision");
-const modelMessageElEl=document.getElementById("modelMessageEl"),sTotalElEl=document.getElementById("sTotalEl"),sPendingElEl=document.getElementById("sPendingEl"),sReceivedElEl=document.getElementById("sReceivedEl"),saidaBodyElEl=document.getElementById("saidaBodyEl"),recebidoBodyElEl=document.getElementById("recebidoBodyEl");
+const mClient=document.getElementById("m_client"),mOrder=document.getElementById("m_order"),mNf=document.getElementById("m_nf"),mCode=document.getElementById("m_code"),mRevision=document.getElementById("m_revision");
+const modelMessageEl=document.getElementById("modelMessage"),sTotalEl=document.getElementById("sTotal"),sPendingEl=document.getElementById("sPending"),sReceivedEl=document.getElementById("sReceived"),saidaBodyEl=document.getElementById("saidaBody"),recebidoBodyEl=document.getElementById("recebidoBody");
 function msg(el,text,error=true){el.textContent=text;el.className="notice show "+(error?"error":"success")}
 async function session(){
   const {data}=await supabase.auth.getSession();
