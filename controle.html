@@ -165,12 +165,16 @@ async function session(){
 }
 document.getElementById("loginForm").onsubmit=async e=>{
   e.preventDefault();
+
   const email=document.getElementById("email").value.trim().toLowerCase();
   const password=document.getElementById("password").value;
   const button=e.submitter||document.querySelector('#loginForm button[type="submit"]');
   const loginMessage=document.getElementById("loginMessage");
 
-  if(button){button.disabled=true;button.textContent="Entrando…";}
+  if(button){
+    button.disabled=true;
+    button.textContent="Entrando…";
+  }
   loginMessage.className="notice";
 
   try{
@@ -204,12 +208,27 @@ document.getElementById("loginForm").onsubmit=async e=>{
     }));
     sessionStorage.setItem("cortez_internal_login","1");
 
-    // Do not wait for SDK/session initialization here.
-    // The authenticated token is transferred to controle.html immediately.
-    window.location.replace("./controle.html?auth=1");
+    // A autenticação já foi concluída. Não fazemos setSession, getSession
+    // nem redirecionamento antes de abrir o painel.
+    createAuthenticatedClient(data.access_token);
+    showControl();
+
+    if(button){
+      button.disabled=false;
+      button.textContent="Entrar no controle";
+    }
+
+    // Consultas do painel rodam em segundo plano.
+    loadAll().catch(error=>{
+      msg(modelMessageEl,error?.message||"Não foi possível carregar os dados do controle.",true);
+    });
+
   }catch(error){
     msg(loginMessage,error?.message||"Falha de comunicação com o servidor de autenticação.");
-    if(button){button.disabled=false;button.textContent="Entrar no controle";}
+    if(button){
+      button.disabled=false;
+      button.textContent="Entrar no controle";
+    }
   }
 };
 document.getElementById("logout").onclick=async()=>{
