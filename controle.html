@@ -89,16 +89,41 @@
 <script>
 const SUPABASE_URL="https://kvxmnbkfscpqnbftqjeu.supabase.co";
 const SUPABASE_KEY="sb_publishable_Mx-i_T4xREFQuinN-aq3lA_f3jMTFc5";
-const supabaseReady=Boolean(window.supabase?.createClient);
-const supabase=supabaseReady
-  ? window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{
-      auth:{autoRefreshToken:true,persistSession:true,detectSessionInUrl:false}
-    })
-  : null;
+let supabase=null;
+let accessToken=null;
 
-function requireSupabase(){
-  if(!supabase) throw new Error("O módulo de autenticação não carregou. Recarregue a página.");
+function createAuthenticatedClient(token){
+  if(!window.supabase?.createClient){
+    throw new Error("O módulo de autenticação não carregou.");
+  }
+  accessToken=token;
+  supabase=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY,{
+    auth:{
+      persistSession:false,
+      autoRefreshToken:false,
+      detectSessionInUrl:false
+    },
+    global:{
+      headers:{
+        Authorization:"Bearer "+token
+      }
+    }
+  });
   return supabase;
+}
+
+function showControl(){
+  login.hidden=true;
+  control.hidden=false;
+  control.classList.add("is-open");
+  document.body.classList.add("control-open");
+}
+
+function showLogin(){
+  login.hidden=false;
+  control.hidden=true;
+  control.classList.remove("is-open");
+  document.body.classList.remove("control-open");
 }
 
 let reports=[];
@@ -108,51 +133,33 @@ const modelMessageEl=document.getElementById("modelMessage"),sTotalEl=document.g
 function msg(el,text,error=true){el.textContent=text;el.className="notice show "+(error?"error":"success")}
 async function session(){
   try{
-    const client=requireSupabase();
-
     const saved=sessionStorage.getItem("cortez_auth_session");
-    if(saved){
-      const parsed=JSON.parse(saved);
-      if(parsed?.access_token&&parsed?.refresh_token){
-        const {error}=await client.auth.setSession({
-          access_token:parsed.access_token,
-          refresh_token:parsed.refresh_token
-        });
-        if(error) throw error;
-        sessionStorage.removeItem("cortez_auth_session");
-      }
-    }
-
-    const {data,error}=await client.auth.getSession();
-    if(error) throw error;
-
-    if(!data.session){
-      login.hidden=false;
-      control.hidden=true;
-      control.classList.remove("is-open");
-      document.body.classList.remove("control-open");
+    if(!saved){
+      showLogin();
       return false;
     }
 
-    login.hidden=true;
-    control.hidden=false;
-    control.classList.add("is-open");
-    document.body.classList.add("control-open");
-
-    try{
-      await loadAll();
-    }catch(error){
-      msg(modelMessageEl,error?.message||"Não foi possível carregar os dados do controle.",true);
+    const parsed=JSON.parse(saved);
+    if(!parsed?.access_token){
+      sessionStorage.removeItem("cortez_auth_session");
+      showLogin();
+      return false;
     }
+
+    createAuthenticatedClient(parsed.access_token);
+    showControl();
+
+    // Carrega os dados sem bloquear a abertura do painel.
+    loadAll().catch(error=>{
+      msg(modelMessageEl,error?.message||"Não foi possível carregar os dados do controle.",true);
+    });
+
     return true;
   }catch(error){
     sessionStorage.removeItem("cortez_auth_session");
-    login.hidden=false;
-    control.hidden=true;
-    control.classList.remove("is-open");
-    document.body.classList.remove("control-open");
+    showLogin();
     const loginMessage=document.getElementById("loginMessage");
-    if(loginMessage)msg(loginMessage,error?.message||"Não foi possível inicializar a autenticação.",true);
+    if(loginMessage)msg(loginMessage,error?.message||"Não foi possível restaurar o acesso.",true);
     return false;
   }
 }
@@ -205,7 +212,13 @@ document.getElementById("loginForm").onsubmit=async e=>{
     if(button){button.disabled=false;button.textContent="Entrar no controle";}
   }
 };
-document.getElementById("logout").onclick=async()=>{sessionStorage.removeItem("cortez_internal_login");sessionStorage.removeItem("cortez_auth_session");if(supabase)await supabase.auth.signOut();location.reload()};
+document.getElementById("logout").onclick=async()=>{
+  sessionStorage.removeItem("cortez_internal_login");
+  sessionStorage.removeItem("cortez_auth_session");
+  supabase=null;
+  accessToken=null;
+  location.reload();
+};
 document.querySelectorAll(".workflow-nav .flow-node").forEach(b=>b.onclick=()=>{document.querySelectorAll(".workflow-nav .flow-node").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active");});
 async function loadModel(){
   const {data,error}=await supabase.from("report_templates").select("*").order("created_at").limit(1).maybeSingle();
@@ -614,7 +627,7 @@ document.getElementById("cancelDelete").onclick=()=>document.getElementById("del
   btn.textContent="Excluir relatório";
   if(ok)modal.classList.remove("show");
 };
-window.addEventListener("load",()=>session());
+window.addEventListener("load",()=>{session();});
 </script>
 
 <div id="saveReceivedModal" class="modal">
