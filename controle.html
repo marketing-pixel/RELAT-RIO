@@ -345,130 +345,270 @@ function openSaveReceived(id){
 function safeFileName(value){
   return String(value||"").replace(/[\\/:*?"<>|]+/g,"_").replace(/\s+/g," ").trim();
 }
-async function saveReceivedPdf(report){
-  if(!window.jspdf?.jsPDF)throw new Error("Gerador de PDF não carregou.");
-  const JsPDF=window.jspdf.jsPDF;
-  const pdf=new JsPDF({orientation:"portrait",unit:"mm",format:"a4",compress:true});
-  const pageW=210, margin=15, w=pageW-(margin*2);
-  let y=18;
-
-  const title=(text,size=14)=>{
-    pdf.setFont("helvetica","bold");
-    pdf.setFontSize(size);
-    pdf.setTextColor(21,60,87);
-    const lines=pdf.splitTextToSize(String(text||""),w);
-    if(y+lines.length*(size*.45)>282){pdf.addPage();y=18}
-    pdf.text(lines,margin,y);
-    y+=lines.length*(size*.45)+3;
-  };
-  const textLine=(label,value,bold=false)=>{
-    pdf.setFont("helvetica",bold?"bold":"normal");
-    pdf.setFontSize(9.5);
-    pdf.setTextColor(45,57,66);
-    const lines=pdf.splitTextToSize(label+": "+String(value||"—"),w);
-    if(y+lines.length*4.4>282){pdf.addPage();y=18}
-    pdf.text(lines,margin,y);
-    y+=lines.length*4.4+1.5;
-  };
-
-  title("Pesquisa de satisfação",19);
-  textLine("Cortez Móveis","Relatório de satisfação do cliente",true);
-
-  title("Dados do relatório",12);
-  textLine("Cliente / Empresa",report.client_name,true);
-  textLine("Referente ao pedido nº",report.pedido,true);
-  textLine("NF nº",report.nf,true);
-
-  title("Avaliação",12);
-  textLine("Atendimento vendas",report.atendimento);
-  textLine("Qualidade produto",report.qualidade);
-  textLine("Entrega no prazo",report.entrega);
-  textLine("Atende as expectativas",report.expectativas);
-
-  title("Comentário",12);
-  textLine("Comentário",report.comentario||"Sem comentário.");
-
-  title("Responsável e assinatura",12);
-  textLine("Responsável",report.responsavel,true);
-  textLine("Cargo",report.cargo);
-  textLine("Data do preenchimento",report.data_preenchimento);
-
-  if(report.assinatura_data_url){
-    if(y+48>282){pdf.addPage();y=18}
-    pdf.setFont("helvetica","bold");pdf.setFontSize(9.5);pdf.setTextColor(45,57,66);
-    pdf.text("Assinatura",margin,y);y+=3;
-    pdf.addImage(report.assinatura_data_url,"PNG",margin,y,w,42,undefined,"FAST");
-    y+=47;
-  }
-
-  pdf.setDrawColor(220,228,233);
-  pdf.line(margin,283,pageW-margin,283);
-  pdf.setFont("helvetica","normal");pdf.setFontSize(7.5);pdf.setTextColor(120,132,140);
-  pdf.text("Cortez Móveis · Controle de Relatórios",margin,289);
-
-  pdf.save("Relatorio - "+safeFileName(report.client_name||"Cliente")+" - Pedido "+safeFileName(report.pedido||"Sem pedido")+".pdf");
+async function fetchResponderTemplate(){
+  const url=new URL("./responder.html",window.location.href);
+  const response=await fetch(url.href,{cache:"no-store"});
+  if(!response.ok)throw new Error("Não foi possível carregar o formulário original.");
+  const html=await response.text();
+  const parser=new DOMParser();
+  const doc=parser.parseFromString(html,"text/html");
+  const app=doc.querySelector(".app");
+  if(!app)throw new Error("Estrutura do formulário original não encontrada.");
+  return app;
 }
-async function saveReceivedWord(report){
-  const { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableRow, TableCell, WidthType, ImageRun } = await import("https://esm.sh/docx@9.8.1");
-  const dataUrl=report.assinatura_data_url||"";
-  const children=[
-    new Paragraph({text:"PESQUISA DE SATISFAÇÃO",heading:HeadingLevel.TITLE,alignment:AlignmentType.CENTER}),
-    new Paragraph({text:"Cortez Móveis · Relatório de satisfação do cliente",alignment:AlignmentType.CENTER}),
-    new Paragraph({text:"Dados do relatório",heading:HeadingLevel.HEADING_1}),
-    new Paragraph({children:[new TextRun({text:"Cliente / Empresa: ",bold:true}),new TextRun(report.client_name||"—")]}),
-    new Paragraph({children:[new TextRun({text:"Referente ao pedido nº: ",bold:true}),new TextRun(report.pedido||"—")]}),
-    new Paragraph({children:[new TextRun({text:"NF nº: ",bold:true}),new TextRun(report.nf||"—")]}),
-    new Paragraph({text:"Avaliação",heading:HeadingLevel.HEADING_1})
-  ];
 
-  const rows=[
-    ["Atendimento vendas",report.atendimento],
-    ["Qualidade produto",report.qualidade],
-    ["Entrega no prazo",report.entrega],
-    ["Atende as expectativas?",report.expectativas]
-  ].map(([q,a])=>new TableRow({children:[
-    new TableCell({children:[new Paragraph(q)]}),
-    new TableCell({children:[new Paragraph(a||"—")]})
-  ]}));
+function fillReportSnapshot(app,report){
+  const clone=app.cloneNode(true);
+  const shell=clone.querySelector("#reportShell");
+  if(shell)shell.hidden=false;
 
-  children.push(new Table({
-    width:{size:100,type:WidthType.PERCENTAGE},
-    rows:[
-      new TableRow({children:[new TableCell({children:[new Paragraph("Quesito")]}),new TableCell({children:[new Paragraph("Resposta")]})]}),
-      ...rows
-    ]
-  }));
+  const setValue=(id,value)=>{
+    const el=clone.querySelector("#"+id);
+    if(el)el.value=value??"";
+  };
 
-  children.push(
-    new Paragraph({text:"Comentário",heading:HeadingLevel.HEADING_1}),
-    new Paragraph(report.comentario||"Sem comentário."),
-    new Paragraph({text:"Responsável e assinatura",heading:HeadingLevel.HEADING_1}),
-    new Paragraph({children:[new TextRun({text:"Responsável: ",bold:true}),new TextRun(report.responsavel||"—")]}),
-    new Paragraph({children:[new TextRun({text:"Cargo: ",bold:true}),new TextRun(report.cargo||"—")]}),
-    new Paragraph({children:[new TextRun({text:"Data: ",bold:true}),new TextRun(report.data_preenchimento||"—")]})
-  );
+  setValue("client_name",report.client_name||"");
+  setValue("pedido",report.pedido||"");
+  setValue("nf",report.nf||"");
+  setValue("comentario",report.comentario||"");
+  setValue("responsavel",report.responsavel||"");
+  setValue("cargo",report.cargo||"");
+  setValue("data_preenchimento",report.data_preenchimento||"");
 
-  if(dataUrl.startsWith("data:image/")){
-    try{
-      const base64=dataUrl.split(",")[1];
-      const bytes=Uint8Array.from(atob(base64),c=>c.charCodeAt(0));
-      children.push(
-        new Paragraph({text:"Assinatura",heading:HeadingLevel.HEADING_2}),
-        new Paragraph({children:[new ImageRun({data:bytes,transformation:{width:420,height:130}})]})
-      );
-    }catch{}
+  ["atendimento","qualidade","entrega","expectativas"].forEach(name=>{
+    clone.querySelectorAll('input[name="'+name+'"]').forEach(input=>{
+      input.checked=input.value===(report[name]||"");
+    });
+  });
+
+  clone.querySelectorAll("#message,.client-actions").forEach(el=>el.remove());
+  clone.querySelectorAll("#clearSig").forEach(el=>el.remove());
+
+  const canvas=clone.querySelector("#signature");
+  if(canvas){
+    const img=document.createElement("img");
+    img.src=report.assinatura_data_url||"";
+    img.alt="Assinatura";
+    img.style.cssText="width:100%;height:105px;display:block;object-fit:contain;background:#fff;";
+    canvas.replaceWith(img);
   }
+
+  clone.querySelectorAll("input,textarea").forEach(field=>{
+    if(field.type==="radio"||field.type==="checkbox")return;
+    const box=document.createElement("div");
+    box.className=field.className;
+    box.textContent=field.value||"";
+    box.style.cssText=[
+      "white-space:pre-wrap",
+      "word-break:break-word",
+      "overflow:visible",
+      "min-height:"+(field.tagName==="TEXTAREA"?"70px":"30px"),
+      "display:flex",
+      "align-items:"+(field.tagName==="TEXTAREA"?"flex-start":"center"),
+      "width:100%",
+      "background:"+(field.readOnly?"#f2f5f7":"#fbfcfd"),
+      "border:1px solid #dfe6eb",
+      "border-radius:8px",
+      "padding:8px 9px",
+      "color:#16232d",
+      "font-size:9px",
+      "line-height:1.35",
+      "font-family:Inter,ui-sans-serif,system-ui,-apple-system,'Segoe UI',sans-serif",
+      "box-sizing:border-box"
+    ].join(";");
+    field.replaceWith(box);
+  });
+
+  const css=document.createElement("style");
+  css.textContent=[
+    "*{box-sizing:border-box!important}",
+    ".app{width:100%!important;max-width:none!important;margin:0!important;padding:0!important}",
+    ".topbar{margin-bottom:10px!important}",
+    ".brand img{width:105px!important;height:42px!important}",
+    ".brand-copy strong{font-size:11px!important}",
+    ".brand-copy span{font-size:9px!important}",
+    ".internal-badge{font-size:8px!important;padding:6px 8px!important}",
+    ".shell{width:100%!important;max-width:none!important;border-radius:14px!important;box-shadow:none!important}",
+    ".hero{padding:20px 22px!important}",
+    ".hero h1{font-size:26px!important;margin:5px 0 5px!important}",
+    ".hero p{font-size:10px!important;line-height:1.35!important}",
+    ".hero .eyebrow{font-size:8px!important}",
+    ".content{padding:18px 20px!important}",
+    ".section{padding-bottom:15px!important}",
+    ".section+.section{padding-top:15px!important}",
+    ".section-title{gap:9px!important;margin-bottom:10px!important}",
+    ".number{width:26px!important;height:26px!important;border-radius:7px!important;font-size:9px!important;flex:0 0 auto!important}",
+    ".section-title h2{font-size:13px!important}",
+    ".section-title p{font-size:9px!important;margin-top:2px!important}",
+    ".grid{gap:8px!important}",
+    ".field{gap:4px!important;font-size:9px!important}",
+    ".field input,.field textarea{padding:8px 9px!important;font-size:9px!important;border-radius:8px!important}",
+    ".field textarea{min-height:70px!important;height:70px!important}",
+    ".rating{width:100%!important;max-width:100%!important;overflow:visible!important}",
+    ".row{width:100%!important;min-width:0!important;grid-template-columns:minmax(0,1.7fr) repeat(3,minmax(0,1fr))!important}",
+    ".row>div,.choice{min-width:0!important;min-height:38px!important;padding:6px!important;font-size:7px!important}",
+    ".label{font-size:8px!important;white-space:normal!important;overflow:visible!important;word-break:normal!important}",
+    ".dot{width:13px!important;height:13px!important;border-width:1.5px!important}",
+    ".choice input:checked+.dot{border-width:3px!important}",
+    ".signature{border-radius:8px!important}",
+    ".sig-top{padding:8px 9px!important}",
+    ".sig-top strong{font-size:9px!important}",
+    ".sig-top span{font-size:7px!important}",
+    ".sig-top button{display:none!important}",
+    "#signature{height:105px!important}",
+    ".sig-line{margin:0 15px 10px!important}",
+    ".sig-caption{font-size:7px!important;padding:0 6px 7px!important}",
+    ".footer{padding:8px 20px!important;font-size:7px!important}",
+    ".notice{font-size:8px!important}",
+    "input,.field textarea{overflow:visible!important}"
+  ].join("");
+  clone.prepend(css);
+  return clone;
+}
+
+async function renderReceivedForm(report){
+  if(!window.jspdf?.jsPDF)throw new Error("Gerador de PDF não carregou.");
+  if(!window.html2canvas)throw new Error("Captura do formulário não carregou.");
+
+  const source=await fetchResponderTemplate();
+  const clone=fillReportSnapshot(source,report);
+
+  const PAGE_W=794,PAGE_H=1123,PAD=18;
+  const CONTENT_W=PAGE_W-(PAD*2),CONTENT_H=PAGE_H-(PAD*2);
+
+  const stage=document.createElement("div");
+  stage.style.cssText=[
+    "position:fixed",
+    "left:-100000px",
+    "top:0",
+    "width:"+PAGE_W+"px",
+    "height:"+PAGE_H+"px",
+    "padding:"+PAD+"px",
+    "box-sizing:border-box",
+    "overflow:hidden",
+    "background:#fff",
+    "margin:0",
+    "z-index:-1"
+  ].join(";");
+
+  clone.style.cssText=[
+    "position:relative",
+    "display:block",
+    "width:"+CONTENT_W+"px",
+    "max-width:"+CONTENT_W+"px",
+    "min-width:0",
+    "height:auto",
+    "max-height:none",
+    "margin:0",
+    "padding:0",
+    "overflow:visible",
+    "background:#fff",
+    "box-shadow:none",
+    "border:0",
+    "opacity:1",
+    "transform:none",
+    "pointer-events:none"
+  ].join(";");
+
+  stage.appendChild(clone);
+  document.body.appendChild(stage);
+
+  try{
+    await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+
+    const naturalW=Math.ceil(clone.getBoundingClientRect().width);
+    const naturalH=Math.ceil(clone.scrollHeight);
+    if(!naturalW||!naturalH)throw new Error("Dimensões do formulário inválidas.");
+
+    const scale=Math.min(1,CONTENT_W/naturalW,CONTENT_H/naturalH);
+    clone.style.transformOrigin="top left";
+    clone.style.transform="scale("+scale+")";
+
+    await new Promise(resolve=>requestAnimationFrame(resolve));
+
+    const captured=await window.html2canvas(stage,{
+      scale:2,
+      width:PAGE_W,
+      height:PAGE_H,
+      backgroundColor:"#fff",
+      useCORS:true,
+      allowTaint:false,
+      logging:false,
+      x:0,
+      y:0,
+      scrollX:0,
+      scrollY:0,
+      windowWidth:PAGE_W,
+      windowHeight:PAGE_H
+    });
+
+    return captured.toDataURL("image/jpeg",0.98);
+  }finally{
+    stage.remove();
+  }
+}
+
+function safeReportFile(value){
+  return String(value||"")
+    .replace(/[\\/:*?"<>|]+/g,"_")
+    .replace(/\s+/g," ")
+    .trim();
+}
+
+function reportFileBase(report){
+  return "Relatorio - "+safeReportFile(report.client_name||"Cliente")+" - Pedido "+safeReportFile(report.pedido||"Sem pedido");
+}
+
+async function saveReceivedPdf(report){
+  const imageData=await renderReceivedForm(report);
+  const pdf=new window.jspdf.jsPDF({
+    orientation:"portrait",
+    unit:"mm",
+    format:"a4",
+    compress:true
+  });
+
+  pdf.addImage(imageData,"JPEG",0,0,210,297,undefined,"FAST");
+  pdf.setProperties({
+    title:"Relatório de satisfação - "+(report.client_name||"Cliente"),
+    subject:"Pesquisa de satisfação Cortez Móveis",
+    author:"Cortez Móveis"
+  });
+  pdf.save(reportFileBase(report)+".pdf");
+}
+
+async function saveReceivedWord(report){
+  const imageData=await renderReceivedForm(report);
+  const {Document,Packer,Paragraph,ImageRun}=await import("https://esm.sh/docx@9.8.1");
+
+  const base64=imageData.split(",")[1]||"";
+  const bytes=Uint8Array.from(atob(base64),char=>char.charCodeAt(0));
 
   const doc=new Document({
     sections:[{
-      properties:{page:{margin:{top:720,right:720,bottom:720,left:720}}},
-      children
+      properties:{
+        page:{
+          size:{width:11906,height:16838},
+          margin:{top:0,right:0,bottom:0,left:0}
+        }
+      },
+      children:[
+        new Paragraph({
+          children:[
+            new ImageRun({
+              data:bytes,
+              transformation:{width:794,height:1123}
+            })
+          ]
+        })
+      ]
     }]
   });
+
   const blob=await Packer.toBlob(doc);
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob);
-  a.download="Relatorio - "+safeFileName(report.client_name||"Cliente")+" - Pedido "+safeFileName(report.pedido||"Sem pedido")+".docx";
+  a.download=reportFileBase(report)+".docx";
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -648,7 +788,7 @@ function bindModalActions(){
     }finally{
       pdfBtn.disabled=false;
       const small=pdfBtn.querySelector("small");
-      if(small)small.textContent="Documento para compartilhar e imprimir";
+      if(small)small.textContent="Formulário completo para compartilhar e imprimir";
     }
   };
 
@@ -667,7 +807,7 @@ function bindModalActions(){
     }finally{
       wordBtn.disabled=false;
       const small=wordBtn.querySelector("small");
-      if(small)small.textContent="Arquivo editável no Microsoft Word";
+      if(small)small.textContent="Formulário completo no Microsoft Word";
     }
   };
 
