@@ -4,6 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Responder relatório | Cortez Móveis</title>
 <link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/jspdf@3.0.3/dist/jspdf.umd.min.js"></script>
 </head>
 <body>
 <main class="app">
@@ -77,7 +78,6 @@
 
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { jsPDF } from "https://esm.sh/jspdf@2.5.2";
 import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
 
 const supabase=createClient(SUPABASE_URL,SUPABASE_KEY);
@@ -169,7 +169,9 @@ document.getElementById("saveAs").onclick=async()=>{
   btn.textContent="Gerando PDF…";
 
   try{
-    const pdf=new jsPDF({orientation:"portrait",unit:"mm",format:"a4"});
+    const JsPDF=window.jspdf?.jsPDF;
+    if(!JsPDF) throw new Error("Biblioteca PDF não carregou.");
+    const pdf=new JsPDF({orientation:"portrait",unit:"mm",format:"a4"});
     const margin=16;
     const pageW=210;
     const contentW=pageW-(margin*2);
@@ -244,6 +246,7 @@ document.getElementById("saveAs").onclick=async()=>{
 
     const safe=value=>String(value||"").replace(/[\\/:*?"<>|]+/g,"_").replace(/\s+/g," ").trim();
     const filename="Relatorio - "+safe(clientName||"Cliente")+" - Pedido "+safe(pedido||"Sem pedido")+".pdf";
+    pdf.setProperties({title:"Relatório de satisfação - "+clientName,subject:"Pesquisa de satisfação Cortez Móveis"});
 
     pdf.save(filename);
 
