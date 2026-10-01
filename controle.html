@@ -104,19 +104,12 @@ document.getElementById("loginForm").onsubmit=async e=>{
   const email=document.getElementById("email").value.trim().toLowerCase();
   const password=document.getElementById("password").value;
   const {error}=await supabase.auth.signInWithPassword({email,password});
-  if(!error){sessionStorage.setItem("cortez_internal_login","1");session();return}
-  if(email!=="marketing@cortezmoveis.com.br"){
-    msg(document.getElementById("loginMessage"),"Confira o e-mail e a senha informados.");
+  if(!error){
+    sessionStorage.setItem("cortez_internal_login","1");
+    session();
     return;
   }
-  const redirectUrl=new URL("index.html",window.location.href).href;
-  const {data:signup,error:signupError}=await supabase.auth.signUp({email,password,options:{emailRedirectTo:redirectUrl}});
-  if(signupError){
-    msg(document.getElementById("loginMessage"),"Confira o e-mail e a senha informados.");
-    return;
-  }
-  if(signup?.session){sessionStorage.setItem("cortez_internal_login","1");session();return}
-  msg(document.getElementById("loginMessage"),"Acesso criado. Confirme o e-mail recebido para ativar o acesso interno.",false);
+  msg(document.getElementById("loginMessage"),"E-mail ou senha inválidos.");
 };
 document.getElementById("logout").onclick=async()=>{sessionStorage.removeItem("cortez_internal_login");await supabase.auth.signOut();location.reload()};
 document.querySelectorAll(".workflow-nav .flow-node").forEach(b=>b.onclick=()=>{document.querySelectorAll(".workflow-nav .flow-node").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active");});
