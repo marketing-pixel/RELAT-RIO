@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Relatório de Satisfação do Cliente - Cortez Móveis</title>
 <style>
-:root{--blue:#173f5d;--line:#7c8790;--paper:#fff;--bg:#eef1f3;--text:#15191c}
+:root{--blue:#173f5d;--line:#7c8790;--paper:#fff;--bg:#eef1f3;--text:#15191c}.site-nav{width:min(900px,calc(100% - 24px));margin:16px auto 0;display:flex;gap:8px}.site-nav a{padding:9px 13px;border-radius:7px;text-decoration:none;color:#4f606b;font-size:13px;font-weight:700}.site-nav a.active,.site-nav a:hover{background:var(--blue);color:#fff}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
 .page{width:min(900px,calc(100% - 24px));margin:24px auto;background:var(--paper);box-shadow:0 8px 28px #0002;padding:28px}
 .header{border:1px solid #222;display:grid;grid-template-columns:1fr 1.7fr;min-height:88px}
@@ -30,7 +30,7 @@ input,textarea{font:inherit;width:100%;border:0;outline:0;background:transparent
 </style>
 </head>
 <body>
-<main class="page">
+<main class="page"><nav class="site-nav"><a href="index.html" class="active">Relatório</a><a href="controle.html">Controle de Relatórios</a></nav>
 <header class="header">
   <div class="header-left"><img class="logo-image" src="https://raw.githubusercontent.com/marketing-pixel/SITE/main/assets/Logo.png" alt="Cortez Móveis"><div><strong>GESTÃO DA QUALIDADE</strong><small>Cortez Móveis</small></div></div>
   <div class="header-right"><strong>RELATÓRIO SATISFAÇÃO DO CLIENTE</strong><small>Código: FVEN003&nbsp;&nbsp;&nbsp; Revisão: 02&nbsp;&nbsp;&nbsp; Página: 1 de 1</small></div>
@@ -89,7 +89,7 @@ document.getElementById('clear').onclick=()=>{x.clearRect(0,0,c.width,c.height);
 document.getElementById('data').value=new Date().toISOString().slice(0,10);
 function data(){const o={};['cliente','pedido','nf','comentario','responsavel','cargo','data'].forEach(id=>o[id]=document.getElementById(id).value);['r1','r2','r3','r4'].forEach(n=>o[n]=document.querySelector('input[name="'+n+'"]:checked')?.value||'');o.signature=signed?c.toDataURL('image/png'):'';return o}
 document.getElementById('save').onclick=()=>{localStorage.setItem('cortez_relatorio_satisfacao',JSON.stringify(data()));document.getElementById('message').textContent='Preenchimento salvo neste navegador.'};
-document.getElementById('finish').onclick=()=>{const missing=['cliente','pedido','nf','responsavel','cargo','data'].some(id=>!document.getElementById(id).value);const ratings=['r1','r2','r3','r4'].some(n=>!document.querySelector('input[name="'+n+'"]:checked'));if(missing||ratings||!signed){document.getElementById('message').textContent='Preencha todos os dados, todos os quesitos e faça a assinatura antes de finalizar.';return}localStorage.setItem('cortez_relatorio_satisfacao_final',JSON.stringify({...data(),finalizadoEm:new Date().toISOString()}));document.getElementById('success').hidden=false;setTimeout(()=>window.print(),250)};
+const reportId=new URLSearchParams(location.search).get('id')||('R-'+Date.now().toString(36).toUpperCase());\nfunction outgoingRecord(){return {id:reportId,cliente:document.getElementById('cliente').value,pedido:document.getElementById('pedido').value,nf:document.getElementById('nf').value,status:'saida',criadoEm:new Date().toISOString()}}\nconst initialSaved=localStorage.getItem('cortez_relatorio_satisfacao');\nif(!initialSaved&&location.search.includes('id=')){localStorage.setItem('cortez_saida_'+reportId,JSON.stringify({id:reportId,status:'saida',criadoEm:new Date().toISOString()}))}\ndocument.getElementById('finish').onclick=()=>{const missing=['cliente','pedido','nf','responsavel','cargo','data'].some(id=>!document.getElementById(id).value);const ratings=['r1','r2','r3','r4'].some(n=>!document.querySelector('input[name="'+n+'"]:checked'));if(missing||ratings||!signed){document.getElementById('message').textContent='Preencha todos os dados, todos os quesitos e faça a assinatura antes de finalizar.';return}localStorage.setItem('cortez_relatorio_satisfacao_final',JSON.stringify({...data(),id:reportId,status:'recebido',finalizadoEm:new Date().toISOString()})); localStorage.setItem('cortez_recebido_'+reportId,JSON.stringify({...data(),id:reportId,status:'recebido',finalizadoEm:new Date().toISOString()}));document.getElementById('success').hidden=false;setTimeout(()=>window.print(),250)};
 window.addEventListener('resize',()=>resize());resize();
 const saved=localStorage.getItem('cortez_relatorio_satisfacao');if(saved)try{const o=JSON.parse(saved);Object.keys(o).forEach(k=>{if(k.startsWith('r')){const i=document.querySelector('input[name="'+k+'"][value="'+o[k]+'"]');if(i)i.checked=true}else if(k!=='signature'&&document.getElementById(k))document.getElementById(k).value=o[k]});if(o.signature){const i=new Image;i.onload=()=>{const r=c.getBoundingClientRect();x.drawImage(i,0,0,r.width,r.height);signed=true};i.src=o.signature}}catch{}
 </script>
