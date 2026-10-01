@@ -159,17 +159,14 @@ loginForm?.addEventListener("submit",async e=>{
 });
 
 async function init(){
-  if(!token){
-    internalLogin.hidden=false;
+  if(token){
+    const publicUrl=new URL("./formulario.html",window.location.href);
+    publicUrl.search=new URLSearchParams({token:token.trim()}).toString();
+    publicUrl.hash="";
+    window.location.replace(publicUrl.href);
     return;
   }
-  document.getElementById("brandTitle").textContent="GESTÃO DA QUALIDADE";
-  document.getElementById("brandSubtitle").textContent="FVEN003 · Revisão 02";
-  document.getElementById("internalBadge").textContent="Pesquisa de satisfação";
-  reportShell.hidden=false;
-  window.addEventListener("resize",()=>resizeCanvas(true));
-  resizeCanvas(false);
-  loadReport();
+  internalLogin.hidden=false;
 }
 init();
 </script>
