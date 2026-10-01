@@ -5,6 +5,7 @@
 <title>Responder relatório | Cortez Móveis</title>
 <link rel="stylesheet" href="styles.css">
 <script src="https://cdn.jsdelivr.net/npm/jspdf@3.0.3/dist/jspdf.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
 <main class="app">
@@ -169,91 +170,151 @@ document.getElementById("saveAs").onclick=async()=>{
   btn.textContent="Gerando PDF…";
 
   try{
-    const JsPDF=window.jspdf?.jsPDF;
-    if(!JsPDF) throw new Error("Biblioteca PDF não carregou.");
-    const pdf=new JsPDF({orientation:"portrait",unit:"mm",format:"a4"});
-    const margin=16;
-    const pageW=210;
-    const contentW=pageW-(margin*2);
-    let y=18;
+    if(!window.jspdf?.jsPDF)throw new Error("Gerador de PDF não carregou.");
+    if(!window.html2canvas)throw new Error("Captura do formulário não carregou.");
 
-    const addTitle=(text,size=14)=>{
-      pdf.setFont("helvetica","bold");
-      pdf.setFontSize(size);
-      pdf.setTextColor(21,60,87);
-      const lines=pdf.splitTextToSize(text,contentW);
-      pdf.text(lines,margin,y);
-      y+=lines.length*(size*0.42)+3;
-    };
+    const source=document.querySelector(".app");
+    if(!source)throw new Error("Formulário não encontrado.");
 
-    const addText=(text,size=10,bold=false)=>{
-      pdf.setFont("helvetica",bold?"bold":"normal");
-      pdf.setFontSize(size);
-      pdf.setTextColor(45,57,66);
-      const lines=pdf.splitTextToSize(String(text||""),contentW);
-      if(y+(lines.length*4.6)>278){pdf.addPage();y=18}
-      pdf.text(lines,margin,y);
-      y+=lines.length*4.6+2;
-    };
+    /*
+     * Cria uma cópia visual exata do formulário.
+     * Os valores atuais dos campos e o canvas da assinatura são copiados para
+     * que o PDF represente o que o cliente está vendo na tela.
+     */
+    const clone=source.cloneNode(true);
+    clone.style.position="absolute";
+    clone.style.left="-100000px";
+    clone.style.top="0";
+    clone.style.width=source.getBoundingClientRect().width+"px";
+    clone.style.maxWidth="none";
+    clone.style.margin="0";
+    clone.style.opacity="1";
+    clone.style.transform="none";
+    clone.style.pointerEvents="none";
+    clone.style.background="#fff";
+    document.body.appendChild(clone);
 
-    addTitle("Pesquisa de satisfação",20);
-    addText("Cortez Móveis · Relatório de satisfação do cliente",9,false);
+    const liveFields=source.querySelectorAll("input,textarea");
+    const clonedFields=clone.querySelectorAll("input,textarea");
 
-    const clientName=document.getElementById("client_name").value.trim();
-    const pedido=document.getElementById("pedido").value.trim();
-    const nf=document.getElementById("nf").value.trim();
+    liveFields.forEach((field,i)=>{
+      const target=clonedFields[i];
+      if(!target)return;
+      target.value=field.value;
+      if(field.checked)target.setAttribute("checked","");
+      else target.removeAttribute("checked");
+    });
 
-    addTitle("Dados do relatório",13);
-    addText("Cliente / Empresa: "+clientName,10,true);
-    addText("Referente ao pedido nº: "+pedido,10,true);
-    addText("NF nº: "+nf,10,true);
-
-    addTitle("Avaliação",13);
-    const ratingLabels={
-      atendimento:"Atendimento vendas",
-      qualidade:"Qualidade produto",
-      entrega:"Entrega no prazo",
-      expectativas:"Atende as expectativas?"
-    };
-    for(const [key,label] of Object.entries(ratingLabels)){
-      const value=document.querySelector('input[name="'+key+'"]:checked')?.value||"Não informado";
-      addText(label+": "+value,10,false);
+    const liveCanvas=source.querySelector("#signature");
+    const clonedCanvas=clone.querySelector("#signature");
+    if(liveCanvas&&clonedCanvas){
+      const replacementImg=document.createElement("img");
+      replacementImg.src=liveCanvas.toDataURL("image/png");
+      replacementImg.alt="Assinatura";
+      replacementImg.style.width="100%";
+      replacementImg.style.height="190px";
+      replacementImg.style.display="block";
+      replacementImg.style.objectFit="contain";
+      clonedCanvas.replaceWith(replacementImg);
     }
 
-    addTitle("Comentário",13);
-    addText(document.getElementById("comentario").value.trim()||"Sem comentário.");
+    // No PDF, os controles inferiores não precisam aparecer como elementos interativos.
+    // O restante da página permanece igual à tela.
+    const clonedActions=clone.querySelector(".client-actions");
+    if(clonedActions)clonedActions.style.display="none";
 
-    addTitle("Responsável e assinatura",13);
-    addText("Responsável: "+document.getElementById("responsavel").value.trim(),10,true);
-    addText("Cargo: "+document.getElementById("cargo").value.trim(),10);
-    addText("Data do preenchimento: "+document.getElementById("data_preenchimento").value,10);
+    const canvasImage=await window.html2canvas(clone,{
+      scale:2,
+      useCORS:true,
+      allowTaint:false,
+      backgroundColor:"#ffffff",
+      logging:false,
+      scrollX:0,
+      scrollY:0
+    });
 
-    const signatureCanvas=document.getElementById("signature");
-    if(signed){
-      if(y+45>278){pdf.addPage();y=18}
-      addText("Assinatura:",10,true);
-      const dataUrl=signatureCanvas.toDataURL("image/png");
-      pdf.addImage(dataUrl,"PNG",margin,y,contentW,42);
-      y+=47;
+    clone.remove();
+
+    const JsPDF=window.jspdf.jsPDF;
+    const pdf=new JsPDF({
+      orientation:"portrait",
+      unit:"mm",
+      format:"a4",
+      compress:true
+    });
+
+    const pageWidth=210;
+    const pageHeight=297;
+    const margin=8;
+    const usableWidth=pageWidth-(margin*2);
+    const imageWidth=usableWidth;
+    const imageHeight=(canvasImage.height*imageWidth)/canvasImage.width;
+    const usableHeight=pageHeight-(margin*2);
+
+    let sourceY=0;
+    let pageIndex=0;
+
+    while(sourceY<imageHeight-0.1){
+      if(pageIndex>0)pdf.addPage();
+
+      const remaining=imageHeight-sourceY;
+      const sliceHeight=Math.min(usableHeight,remaining);
+      const sourceSliceHeight=Math.max(1,Math.round((sliceHeight/imageHeight)*canvasImage.height));
+
+      const slice=document.createElement("canvas");
+      slice.width=canvasImage.width;
+      slice.height=sourceSliceHeight;
+
+      const sliceCtx=slice.getContext("2d");
+      sliceCtx.fillStyle="#fff";
+      sliceCtx.fillRect(0,0,slice.width,slice.height);
+
+      sliceCtx.drawImage(
+        canvasImage,
+        0,
+        Math.round((sourceY/imageHeight)*canvasImage.height),
+        canvasImage.width,
+        sourceSliceHeight,
+        0,
+        0,
+        canvasImage.width,
+        sourceSliceHeight
+      );
+
+      const sliceData=slice.toDataURL("image/jpeg",0.94);
+      const actualSliceHeight=(sourceSliceHeight/canvasImage.height)*imageHeight;
+
+      pdf.addImage(
+        sliceData,
+        "JPEG",
+        margin,
+        margin,
+        imageWidth,
+        actualSliceHeight,
+        undefined,
+        "FAST"
+      );
+
+      sourceY+=actualSliceHeight;
+      pageIndex++;
     }
-
-    pdf.setDrawColor(220,228,233);
-    pdf.line(margin,285,pageW-margin,285);
-    pdf.setFont("helvetica","normal");
-    pdf.setFontSize(8);
-    pdf.setTextColor(120,132,140);
-    pdf.text("Cortez Móveis · Pesquisa de satisfação",margin,291);
 
     const safe=value=>String(value||"").replace(/[\\/:*?"<>|]+/g,"_").replace(/\s+/g," ").trim();
-    const filename="Relatorio - "+safe(clientName||"Cliente")+" - Pedido "+safe(pedido||"Sem pedido")+".pdf";
-    pdf.setProperties({title:"Relatório de satisfação - "+clientName,subject:"Pesquisa de satisfação Cortez Móveis"});
+    const clientName=document.getElementById("client_name").value.trim()||"Cliente";
+    const pedido=document.getElementById("pedido").value.trim()||"Sem pedido";
+    const filename="Relatorio - "+safe(clientName)+" - Pedido "+safe(pedido)+".pdf";
 
+    pdf.setProperties({
+      title:"Relatório de satisfação - "+clientName,
+      subject:"Pesquisa de satisfação Cortez Móveis",
+      author:"Cortez Móveis"
+    });
     pdf.save(filename);
 
-    showMsg("PDF gerado com sucesso. O navegador fará o salvamento do arquivo.",false);
+    showMsg("PDF do formulário gerado com sucesso.",false);
   }catch(error){
-    console.error(error);
-    showMsg("Não foi possível gerar o PDF. Tente novamente.",true);
+    console.error("Erro ao gerar PDF:",error);
+    showMsg("Não foi possível gerar o PDF do formulário. Atualize a página e tente novamente.",true);
   }finally{
     btn.disabled=false;
     btn.textContent=original;
