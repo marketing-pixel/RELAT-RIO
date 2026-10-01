@@ -86,3 +86,20 @@ body{background:#fff}.app{width:100%;margin:0}.shell{border:0;box-shadow:none}.t
 #finalize.is-processing{opacity:.7;pointer-events:none}
 #finalize.is-processing:before{content:"";display:inline-block;width:11px;height:11px;margin-right:8px;border:2px solid rgba(255,255,255,.45);border-top-color:#fff;border-radius:50%;vertical-align:-2px;animation:spin .65s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+
+.row-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.copy-action,.delete-btn{display:inline-flex;align-items:center;gap:6px;transition:transform .2s ease,background .2s ease,border-color .2s ease,box-shadow .2s ease,color .2s ease}
+.copy-action .copy-icon{width:14px;height:14px;display:grid;place-items:center;font-size:11px;font-weight:900;transition:transform .22s ease}
+.copy-action.copied{background:#e9f7ef;border-color:#bfe1cd;color:var(--green);box-shadow:0 8px 20px rgba(47,127,95,.14);animation:copySuccess .35s ease}
+.copy-action.copied .copy-icon{transform:scale(1.18) rotate(-8deg)}
+.delete-btn{border:1px solid #f0d2d2;background:#fff7f7;color:#a04b4b;border-radius:7px;padding:7px 8px;font-size:10px;font-weight:800;cursor:pointer}
+.delete-btn:hover{background:#fff0f0;border-color:#e9bcbc;transform:translateY(-1px)}
+.delete-btn span:first-child{font-size:14px;line-height:10px}
+.btn.danger{background:#a84b4b;color:#fff;box-shadow:0 9px 22px rgba(168,75,75,.18)}
+.btn.danger:hover{background:#933d3d}
+.delete-modal .delete-card{transform:translateY(12px) scale(.96);opacity:0;transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .22s ease}
+.delete-modal.show .delete-card{transform:none;opacity:1}
+.delete-modal-icon{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;margin-bottom:14px;background:#fff0f0;color:#a84b4b;border:1px solid #f0cccc;font-size:28px;font-weight:700;box-shadow:0 12px 28px rgba(168,75,75,.10)}
+@keyframes copySuccess{0%{transform:scale(.94)}60%{transform:scale(1.04)}100%{transform:scale(1)}}
+@media(max-width:760px){.row-actions{align-items:stretch}.row-actions .copy-btn,.row-actions .delete-btn{width:100%;justify-content:center}}
