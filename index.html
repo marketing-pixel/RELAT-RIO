@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Relatório de Satisfação do Cliente | Cortez Móveis</title>
+<title>Acesso interno | Cortez Móveis</title>
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -10,12 +10,26 @@
   <header class="topbar">
     <div class="brand">
       <img src="https://raw.githubusercontent.com/marketing-pixel/SITE/main/assets/Logo.png" alt="Cortez Móveis">
-      <div class="brand-copy"><strong>GESTÃO DA QUALIDADE</strong><span>FVEN003 · Revisão 02</span></div>
+      <div class="brand-copy"><strong>ACESSO INTERNO</strong><span>Controle de Relatórios</span></div>
     </div>
-    <nav class="nav"><a href="index.html" class="active">Relatório</a><a href="controle.html">Controle de Relatórios</a></nav>
+    <div class="internal-badge">Área restrita</div>
   </header>
 
-  <section class="shell">
+  <section class="login" id="internalLogin" hidden>
+  <div class="login-card">
+    <div class="login-mark">C</div>
+    <h1>Acesso interno</h1>
+    <p>Entre com o acesso administrativo da Cortez Móveis para abrir o <strong>Controle de relatórios</strong>.</p>
+    <form id="loginForm">
+      <label class="field">E-mail<input id="loginEmail" type="email" value="marketing@cortezmoveis.com.br" autocomplete="username" required></label>
+      <label class="field">Senha<input id="loginPassword" type="password" autocomplete="current-password" required></label>
+      <div id="loginMessage" class="notice"></div>
+      <div class="actions"><button class="btn primary" type="submit">Acessar controle</button></div>
+    </form>
+  </div>
+</section>
+
+<section class="shell" id="reportShell" hidden>
     <header class="hero">
       <div class="eyebrow">FVEN003 · RELATÓRIO DE SATISFAÇÃO DO CLIENTE</div>
       <h1>Pesquisa de satisfação</h1>
@@ -84,6 +98,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { SUPABASE_URL, SUPABASE_KEY } from "./config.js";
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 const token = new URLSearchParams(location.search).get("token");
+const internalLogin = document.getElementById("internalLogin");
+const reportShell = document.getElementById("reportShell");
+const loginForm = document.getElementById("loginForm");
+const loginEmail = document.getElementById("loginEmail");
+const loginPassword = document.getElementById("loginPassword");
+const loginMessage = document.getElementById("loginMessage");
 const ids = ["comentario","responsavel","cargo","data_preenchimento"];
 let signed=false,drawing=false;const canvas=document.getElementById("signature"),ctx=canvas.getContext("2d");
 function resizeCanvas(keep=true){const old=keep&&signed?canvas.toDataURL("image/png"):null;const r=canvas.getBoundingClientRect(),d=devicePixelRatio||1;canvas.width=r.width*d;canvas.height=r.height*d;ctx.setTransform(d,0,0,d,0,0);ctx.lineCap="round";ctx.lineJoin="round";ctx.lineWidth=2.2;ctx.strokeStyle="#153c57";if(old){const img=new Image;img.onload=()=>ctx.drawImage(img,0,0,r.width,r.height);img.src=old}}
@@ -93,9 +113,10 @@ canvas.addEventListener("pointermove",e=>{if(!drawing)return;const p=pos(e);ctx.
 ["pointerup","pointercancel","pointerleave"].forEach(v=>canvas.addEventListener(v,()=>drawing=false));
 document.getElementById("clearSig").onclick=()=>{ctx.clearRect(0,0,canvas.width,canvas.height);signed=false};
 function showMsg(text,error=true){const m=document.getElementById("message");m.textContent=text;m.className="notice show "+(error?"error":"success")}
+function showLoginMsg(text,error=true){loginMessage.textContent=text;loginMessage.className="notice show "+(error?"error":"success")}
 function lockAll(){document.querySelectorAll("#formArea input,#formArea textarea").forEach(el=>{if(!["client_name","pedido","nf"].includes(el.id))el.disabled=true});document.querySelector("#clearSig").disabled=true;document.getElementById("submit").hidden=true;document.getElementById("saveDraft").hidden=true}
 function setVal(id,v){const el=document.getElementById(id);if(el&&v!=null)el.value=v}
-async function load(){
+async function loadReport(){
   if(!token){document.getElementById("loading").className="notice";document.getElementById("invalid").className="notice show error";return}
   const {data,error}=await supabase.rpc("get_report_public",{p_token:token});
   document.getElementById("loading").className="notice";
@@ -123,6 +144,25 @@ document.getElementById("submit").onclick=async()=>{
   document.getElementById("receivedBanner").hidden=false;lockAll();
   setTimeout(()=>window.print(),700);
 };
-window.addEventListener("resize",()=>resizeCanvas(true));resizeCanvas(false);load();
+loginForm?.addEventListener("submit",async e=>{
+  e.preventDefault();
+  const {error}=await supabase.auth.signInWithPassword({email:loginEmail.value.trim(),password:loginPassword.value});
+  if(error){showLoginMsg("E-mail ou senha inválidos.");return}
+  location.replace("controle.html");
+});
+
+async function init(){
+  if(!token){
+    const {data}=await supabase.auth.getSession();
+    if(data.session){location.replace("controle.html");return}
+    internalLogin.hidden=false;
+    return;
+  }
+  reportShell.hidden=false;
+  window.addEventListener("resize",()=>resizeCanvas(true));
+  resizeCanvas(false);
+  loadReport();
+}
+init();
 </script>
 </body></html>
