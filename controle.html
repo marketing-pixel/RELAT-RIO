@@ -513,11 +513,31 @@ function openDeleteModal(id){
   modal.classList.add("show");
 }
 async function deleteReport(id){
-  const {error}=await supabase.from("reports").delete().eq("id",id);
-  if(error){msg(modelMessageEl,error.message);return false}
-  await loadReports();
-  msg(modelMessageEl,"Relatório excluído com sucesso.",false);
-  return true;
+  try{
+    const {data,error}=await supabase
+      .from("reports")
+      .delete()
+      .eq("id",id)
+      .select("id")
+      .maybeSingle();
+
+    if(error){
+      msg(modelMessageEl,error.message||"Não foi possível excluir o relatório.");
+      return false;
+    }
+
+    if(!data?.id){
+      msg(modelMessageEl,"O relatório não foi encontrado ou não está disponível para exclusão.");
+      return false;
+    }
+
+    await loadReports();
+    msg(modelMessageEl,"Relatório excluído com sucesso.",false);
+    return true;
+  }catch(error){
+    msg(modelMessageEl,error?.message||"Não foi possível excluir o relatório.");
+    return false;
+  }
 }
 document.getElementById("saveModel").onclick=async()=>{const {data,error}=await supabase.from("report_templates").update({internal_client:mClient.value.trim(),internal_order:mOrder.value.trim(),internal_invoice:mNf.value.trim(),code:mCode.value.trim(),revision:mRevision.value.trim(),updated_at:new Date().toISOString()}).not("id","is",null).select().maybeSingle();if(error)msg(modelMessageEl,error.message);else msg(modelMessageEl,"Modelo salvo com sucesso.",false)};
 document.getElementById("finalize").onclick=async()=>{
