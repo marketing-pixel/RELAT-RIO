@@ -67,7 +67,7 @@
       access_token: session.access_token,
       refresh_token: session.refresh_token
     }));
-    window.location.href = "./controle.html";
+    window.location.href = "./formulario.html";
   }
 
   async function init() {
@@ -85,7 +85,7 @@
       if (!saved) return;
       const parsed = JSON.parse(saved);
       if (parsed?.access_token && parsed?.refresh_token) {
-        window.location.replace("./controle.html");
+        window.location.replace("./formulario.html");
       }
     } catch {
       sessionStorage.removeItem("cortez_auth_session");
