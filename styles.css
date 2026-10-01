@@ -131,6 +131,8 @@ body{background:#fff}.app{width:100%;margin:0}.shell{border:0;box-shadow:none}.t
 .save-received-icon svg{width:16px;height:16px;display:block;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .save-received-btn:hover .save-received-icon{transform:translateY(-1px)}
 .save-received-btn:disabled{opacity:.65;cursor:wait;transform:none}
+.save-received-btn .save-received-icon{width:16px;height:16px;margin:0;border:0;border-radius:0;background:transparent;box-shadow:none;font-size:inherit;font-weight:inherit}
+.save-received-btn .save-received-icon svg{width:16px;height:16px}
 .save-received-icon{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;margin-bottom:14px;background:#edf6fa;color:var(--navy);border:1px solid #cfe1e9;font-size:25px;font-weight:900;box-shadow:0 10px 26px rgba(21,60,87,.10)}
 .save-received-card{transform:translateY(12px) scale(.96);opacity:0;transition:transform .28s cubic-bezier(.2,.8,.2,1),opacity .22s ease}
 #saveReceivedModal.show .save-received-card{transform:none;opacity:1}
