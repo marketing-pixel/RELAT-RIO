@@ -377,7 +377,19 @@ function fillReportSnapshot(app,report){
 
   ["atendimento","qualidade","entrega","expectativas"].forEach(name=>{
     clone.querySelectorAll('input[name="'+name+'"]').forEach(input=>{
-      input.checked=input.value===(report[name]||"");
+      const selected=input.value===(report[name]||"");
+      input.checked=selected;
+      const dot=input.nextElementSibling;
+      if(dot?.classList.contains("dot")){
+        dot.style.width="13px";
+        dot.style.height="13px";
+        dot.style.borderRadius="50%";
+        dot.style.display="block";
+        dot.style.boxSizing="border-box";
+        dot.style.border=selected?"3px solid #153c57":"1.5px solid #b8c6ce";
+        dot.style.background="#fff";
+        dot.style.boxShadow=selected?"0 0 0 2px rgba(21,60,87,.08)":"none";
+      }
     });
   });
 
