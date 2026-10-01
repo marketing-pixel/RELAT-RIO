@@ -306,7 +306,7 @@ document.getElementById("submit").onclick=async()=>{
 };
 
 window.addEventListener("resize",()=>resizeCanvas(true));
-resizeCanvas(false);
 initializeReport();
+requestAnimationFrame(()=>resizeCanvas(false));
 </script>
 </body></html>
