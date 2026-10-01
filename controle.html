@@ -115,13 +115,82 @@ document.getElementById("loginForm").onsubmit=async e=>{
 };
 document.getElementById("logout").onclick=async()=>{sessionStorage.removeItem("cortez_internal_login");await supabase.auth.signOut();location.reload()};
 document.querySelectorAll(".workflow-nav .flow-node").forEach(b=>b.onclick=()=>{document.querySelectorAll(".workflow-nav .flow-node").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".panel").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.getElementById(b.dataset.tab).classList.add("active");});
-async function loadModel(){const {data,error}=await supabase.from("report_templates").select("*").order("created_at").limit(1).maybeSingle();if(error){msg(document.getElementById("modelMessage"),error.message);return}if(data){mClient.value=data.internal_client||"";mOrder.value=data.internal_order||"";mNf.value=data.internal_invoice||"";mCode.value=data.code||"FVEN003";mRevision.value=data.revision||"02"}}
-async function loadReports(){const {data,error}=await supabase.from("reports").select("id,public_token,status,client_name,pedido,nf,responsavel,sent_at,received_at").order("created_at",{ascending:false});if(error){msg(document.getElementById("modelMessage"),error.message);return}reports=data||[];const out=reports.filter(r=>r.status==="saida"),inc=reports.filter(r=>r.status==="recebido");sTotalEl.textContent=reports.length;sPendingEl.textContent=out.length;sReceivedEl.textContent=inc.length;saidaBodyEl.innerHTML=out.length?out.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+date(r.sent_at)+'</td><td><span class="pill out">Pendente</span></td><td><button class="copy-btn" data-token="'+r.public_token+'">Copiar</button></td></tr>').join(""):'<tr><td colspan="6">Nenhuma saída cadastrada.</td></tr>';recebidoBodyEl.innerHTML=inc.length?inc.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+esc(r.responsavel||"-")+'</td><td>'+date(r.received_at)+'</td><td><span class="pill in">Recebido</span></td></tr>').join(""):'<tr><td colspan="6">Nenhum relatório recebido.</td></tr>';document.querySelectorAll("[data-token]").forEach(b=>b.onclick=()=>copy(makeUrl(b.dataset.token)))}
+async function loadModel(){
+  const {data,error}=await supabase.from("report_templates").select("*").order("created_at").limit(1).maybeSingle();
+  if(error){msg(modelMessageEl,error.message);return}
+  if(data){
+    mClient.value=data.internal_client||"";
+    mOrder.value=data.internal_order||"";
+    mNf.value=data.internal_invoice||"";
+    mCode.value=data.code||"FVEN003";
+    mRevision.value=data.revision||"02";
+  }
+}
+async function loadReports(){const {data,error}=await supabase.from("reports").select("id,public_token,status,client_name,pedido,nf,responsavel,sent_at,received_at").order("created_at",{ascending:false});if(error){msg(document.getElementById("modelMessage"),error.message);return}reports=data||[];const out=reports.filter(r=>r.status==="saida"),inc=reports.filter(r=>r.status==="recebido");sTotalEl.textContent=reports.length;sPendingEl.textContent=out.length;sReceivedEl.textContent=inc.length;saidaBodyEl.innerHTML=out.length?out.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+date(r.sent_at)+'</td><td><span class="pill out">Enviado · aguardando cliente</span></td><td><button class="copy-btn" data-token="'+r.public_token+'">Copiar</button></td></tr>').join(""):'<tr><td colspan="6">Nenhuma saída cadastrada.</td></tr>';recebidoBodyEl.innerHTML=inc.length?inc.map(r=>'<tr><td>'+esc(r.client_name)+'</td><td>'+esc(r.pedido)+'</td><td>'+esc(r.nf)+'</td><td>'+esc(r.responsavel||"-")+'</td><td>'+date(r.received_at)+'</td><td><span class="pill in">Recebido</span></td></tr>').join(""):'<tr><td colspan="6">Nenhum relatório recebido.</td></tr>';document.querySelectorAll("[data-token]").forEach(b=>b.onclick=()=>copy(makeUrl(b.dataset.token)))}
 function date(v){return v?new Date(v).toLocaleString("pt-BR"): "-"}function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[m]))}
-function makeUrl(token){return new URL("index.html?token="+encodeURIComponent(token),location.href).href}
+function makeUrl(token){
+  const u=new URL("./index.html",window.location.href);
+  u.search=new URLSearchParams({token}).toString();
+  return u.href;
+}
 async function copy(t){try{await navigator.clipboard.writeText(t);alert("Link copiado.")}catch{prompt("Copie o link:",t)}}
 document.getElementById("saveModel").onclick=async()=>{const {data,error}=await supabase.from("report_templates").update({internal_client:mClient.value.trim(),internal_order:mOrder.value.trim(),internal_invoice:mNf.value.trim(),code:mCode.value.trim(),revision:mRevision.value.trim(),updated_at:new Date().toISOString()}).not("id","is",null).select().maybeSingle();if(error)msg(modelMessageEl,error.message);else msg(modelMessageEl,"Modelo salvo com sucesso.",false)};
-document.getElementById("finalize").onclick=async()=>{if(!mClient.value.trim()||!mOrder.value.trim()||!mNf.value.trim()){msg(modelMessageEl,"Preencha Cliente/Empresa, Pedido e NF antes de finalizar.");return}const {data:t,error:te}=await supabase.from("report_templates").select("*").order("created_at").limit(1).single();if(te){msg(modelMessageEl,te.message);return}const {data:r,error}=await supabase.from("reports").insert({template_id:t.id,client_name:t.internal_client,pedido:t.internal_order,nf:t.internal_invoice,status:"saida",sent_at:new Date().toISOString()}).select("id,public_token,client_name,pedido,nf,status,sent_at").single();if(error){msg(modelMessageEl,error.message);return}document.getElementById("generatedUrl").textContent=makeUrl(r.public_token);document.getElementById("modal").classList.add("show");loadReports();};
+document.getElementById("finalize").onclick=async()=>{
+  const client=mClient.value.trim();
+  const order=mOrder.value.trim();
+  const nf=mNf.value.trim();
+  const code=mCode.value.trim()||"FVEN003";
+  const revision=mRevision.value.trim()||"02";
+
+  if(!client||!order||!nf){
+    msg(modelMessageEl,"Preencha Cliente / Empresa, Pedido e NF antes de gerar o link.");
+    return;
+  }
+
+  const {data:template,error:templateError}=await supabase
+    .from("report_templates")
+    .update({
+      internal_client:client,
+      internal_order:order,
+      internal_invoice:nf,
+      code,
+      revision,
+      updated_at:new Date().toISOString()
+    })
+    .eq("id",(await supabase.from("report_templates").select("id").order("created_at").limit(1).single()).data?.id)
+    .select("*")
+    .single();
+
+  if(templateError){
+    msg(modelMessageEl,templateError.message);
+    return;
+  }
+
+  const {data:r,error}=await supabase
+    .from("reports")
+    .insert({
+      template_id:template.id,
+      client_name:client,
+      pedido:order,
+      nf:nf,
+      status:"saida",
+      sent_at:new Date().toISOString()
+    })
+    .select("id,public_token,client_name,pedido,nf,status,sent_at")
+    .single();
+
+  if(error){
+    msg(modelMessageEl,error.message);
+    return;
+  }
+
+  const clientUrl=new URL("./index.html",window.location.href);
+  clientUrl.search=new URLSearchParams({token:r.public_token}).toString();
+  document.getElementById("generatedUrl").textContent=clientUrl.href;
+  document.getElementById("modal").classList.add("show");
+  await loadReports();
+  msg(modelMessageEl,"Relatório enviado para Saídas com sucesso.",false);
+};
 document.getElementById("closeModal").onclick=()=>document.getElementById("modal").classList.remove("show");document.getElementById("copyLink").onclick=()=>copy(document.getElementById("generatedUrl").textContent);
 async function loadAll(){await loadModel();await loadReports()}
 session();
