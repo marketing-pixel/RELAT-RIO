@@ -283,7 +283,20 @@ document.getElementById("saveAs").onclick=async()=>{
       if(!target)return;
 
       if(field.type==="radio"||field.type==="checkbox"){
-        if(field.checked)target.checked=true;
+        target.checked=field.checked;
+        if(field.type==="radio"){
+          const dot=target.nextElementSibling;
+          if(dot?.classList.contains("dot")){
+            dot.style.width="13px";
+            dot.style.height="13px";
+            dot.style.borderRadius="50%";
+            dot.style.display="block";
+            dot.style.boxSizing="border-box";
+            dot.style.border=field.checked?"3px solid #153c57":"1.5px solid #b8c6ce";
+            dot.style.background="#fff";
+            dot.style.boxShadow=field.checked?"0 0 0 2px rgba(21,60,87,.08)":"none";
+          }
+        }
         return;
       }
 
