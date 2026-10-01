@@ -73,7 +73,8 @@ document.getElementById("loginForm").onsubmit=async e=>{
     msg(document.getElementById("loginMessage"),"Confira o e-mail e a senha informados.");
     return;
   }
-  const {data:signup,error:signupError}=await supabase.auth.signUp({email,password});
+  const redirectUrl=new URL("index.html",window.location.href).href;
+  const {data:signup,error:signupError}=await supabase.auth.signUp({email,password,options:{emailRedirectTo:redirectUrl}});
   if(signupError){
     msg(document.getElementById("loginMessage"),"Confira o e-mail e a senha informados.");
     return;
