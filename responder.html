@@ -169,6 +169,8 @@ document.getElementById("saveAs").onclick=async()=>{
   const original=btn.textContent;
   btn.textContent="Gerando PDF…";
 
+  let clone=null;
+
   try{
     if(!window.jspdf?.jsPDF)throw new Error("Gerador de PDF não carregou.");
     if(!window.html2canvas)throw new Error("Captura do formulário não carregou.");
@@ -177,11 +179,10 @@ document.getElementById("saveAs").onclick=async()=>{
     if(!source)throw new Error("Formulário não encontrado.");
 
     /*
-     * Cria uma cópia visual exata do formulário.
-     * Os valores atuais dos campos e o canvas da assinatura são copiados para
-     * que o PDF represente o que o cliente está vendo na tela.
+     * Faz uma cópia exatamente do que está na tela, incluindo os valores
+     * atuais dos campos e a assinatura.
      */
-    const clone=source.cloneNode(true);
+    clone=source.cloneNode(true);
     clone.style.position="absolute";
     clone.style.left="-100000px";
     clone.style.top="0";
@@ -192,49 +193,67 @@ document.getElementById("saveAs").onclick=async()=>{
     clone.style.transform="none";
     clone.style.pointerEvents="none";
     clone.style.background="#fff";
+    clone.style.height="auto";
+    clone.style.maxHeight="none";
+    clone.style.overflow="visible";
+
     document.body.appendChild(clone);
 
+    // Replica os valores dos campos exatamente como estão preenchidos.
     const liveFields=source.querySelectorAll("input,textarea");
     const clonedFields=clone.querySelectorAll("input,textarea");
 
     liveFields.forEach((field,i)=>{
       const target=clonedFields[i];
       if(!target)return;
+
       target.value=field.value;
-      if(field.checked)target.setAttribute("checked","");
-      else target.removeAttribute("checked");
+
+      if(field.type==="radio"||field.type==="checkbox"){
+        if(field.checked)target.setAttribute("checked","");
+        else target.removeAttribute("checked");
+      }
     });
 
+    // Replica a assinatura desenhada.
     const liveCanvas=source.querySelector("#signature");
     const clonedCanvas=clone.querySelector("#signature");
+
     if(liveCanvas&&clonedCanvas){
-      const replacementImg=document.createElement("img");
-      replacementImg.src=liveCanvas.toDataURL("image/png");
-      replacementImg.alt="Assinatura";
-      replacementImg.style.width="100%";
-      replacementImg.style.height="190px";
-      replacementImg.style.display="block";
-      replacementImg.style.objectFit="contain";
-      clonedCanvas.replaceWith(replacementImg);
+      const signatureImage=document.createElement("img");
+      signatureImage.src=liveCanvas.toDataURL("image/png");
+      signatureImage.alt="Assinatura";
+      signatureImage.style.width="100%";
+      signatureImage.style.height="190px";
+      signatureImage.style.display="block";
+      signatureImage.style.objectFit="contain";
+      clonedCanvas.replaceWith(signatureImage);
     }
 
-    // No PDF, os controles inferiores não precisam aparecer como elementos interativos.
-    // O restante da página permanece igual à tela.
-    const clonedActions=clone.querySelector(".client-actions");
-    if(clonedActions)clonedActions.style.display="none";
+    // Os botões não fazem parte do documento salvo.
+    const actions=clone.querySelector(".client-actions");
+    if(actions)actions.remove();
 
-    const canvasImage=await window.html2canvas(clone,{
+    const captured=await window.html2canvas(clone,{
       scale:2,
       useCORS:true,
       allowTaint:false,
       backgroundColor:"#ffffff",
       logging:false,
       scrollX:0,
-      scrollY:0
+      scrollY:0,
+      windowWidth:Math.ceil(source.getBoundingClientRect().width),
+      windowHeight:Math.max(document.documentElement.scrollHeight,document.body.scrollHeight)
     });
 
     clone.remove();
+    clone=null;
 
+    /*
+     * Um único A4.
+     * A imagem inteira é reduzida proporcionalmente até caber na folha,
+     * sem cortar topo, rodapé ou qualquer seção do formulário.
+     */
     const JsPDF=window.jspdf.jsPDF;
     const pdf=new JsPDF({
       orientation:"portrait",
@@ -245,59 +264,32 @@ document.getElementById("saveAs").onclick=async()=>{
 
     const pageWidth=210;
     const pageHeight=297;
-    const margin=8;
-    const usableWidth=pageWidth-(margin*2);
-    const imageWidth=usableWidth;
-    const imageHeight=(canvasImage.height*imageWidth)/canvasImage.width;
-    const usableHeight=pageHeight-(margin*2);
+    const margin=7;
+    const availableWidth=pageWidth-(margin*2);
+    const availableHeight=pageHeight-(margin*2);
 
-    let sourceY=0;
-    let pageIndex=0;
+    const sourceRatio=captured.width/captured.height;
+    let pdfWidth=availableWidth;
+    let pdfHeight=pdfWidth/sourceRatio;
 
-    while(sourceY<imageHeight-0.1){
-      if(pageIndex>0)pdf.addPage();
-
-      const remaining=imageHeight-sourceY;
-      const sliceHeight=Math.min(usableHeight,remaining);
-      const sourceSliceHeight=Math.max(1,Math.round((sliceHeight/imageHeight)*canvasImage.height));
-
-      const slice=document.createElement("canvas");
-      slice.width=canvasImage.width;
-      slice.height=sourceSliceHeight;
-
-      const sliceCtx=slice.getContext("2d");
-      sliceCtx.fillStyle="#fff";
-      sliceCtx.fillRect(0,0,slice.width,slice.height);
-
-      sliceCtx.drawImage(
-        canvasImage,
-        0,
-        Math.round((sourceY/imageHeight)*canvasImage.height),
-        canvasImage.width,
-        sourceSliceHeight,
-        0,
-        0,
-        canvasImage.width,
-        sourceSliceHeight
-      );
-
-      const sliceData=slice.toDataURL("image/jpeg",0.94);
-      const actualSliceHeight=(sourceSliceHeight/canvasImage.height)*imageHeight;
-
-      pdf.addImage(
-        sliceData,
-        "JPEG",
-        margin,
-        margin,
-        imageWidth,
-        actualSliceHeight,
-        undefined,
-        "FAST"
-      );
-
-      sourceY+=actualSliceHeight;
-      pageIndex++;
+    if(pdfHeight>availableHeight){
+      pdfHeight=availableHeight;
+      pdfWidth=pdfHeight*sourceRatio;
     }
+
+    const x=(pageWidth-pdfWidth)/2;
+    const y=(pageHeight-pdfHeight)/2;
+
+    pdf.addImage(
+      captured.toDataURL("image/jpeg",0.94),
+      "JPEG",
+      x,
+      y,
+      pdfWidth,
+      pdfHeight,
+      undefined,
+      "FAST"
+    );
 
     const safe=value=>String(value||"").replace(/[\\/:*?"<>|]+/g,"_").replace(/\s+/g," ").trim();
     const clientName=document.getElementById("client_name").value.trim()||"Cliente";
@@ -309,12 +301,14 @@ document.getElementById("saveAs").onclick=async()=>{
       subject:"Pesquisa de satisfação Cortez Móveis",
       author:"Cortez Móveis"
     });
-    pdf.save(filename);
 
-    showMsg("PDF do formulário gerado com sucesso.",false);
+    pdf.save(filename);
+    showMsg("PDF salvo em uma única página A4.",false);
+
   }catch(error){
     console.error("Erro ao gerar PDF:",error);
-    showMsg("Não foi possível gerar o PDF do formulário. Atualize a página e tente novamente.",true);
+    if(clone)clone.remove();
+    showMsg("Não foi possível gerar o PDF. Atualize a página e tente novamente.",true);
   }finally{
     btn.disabled=false;
     btn.textContent=original;
